@@ -1,0 +1,18 @@
+{
+  "tray.exit_app": "退出程序",
+  "tray.stop_kernel": "停止 kernel",
+  "tray.start_kernel": "启动 kernel",
+  "tray.update_profile": "更新订阅",
+  "tray.switch_profile": "切换订阅",
+  "dialog.error": "错误",
+  "dialog.path_error": "路径错误",
+  "dialog.complete": "完成",
+  "dialog.hint": "提示",
+  "dialog.start_kernel_failed": "启动内核失败",
+  "dialog.stop_kernel_failed": "停止内核失败",
+  "dialog.update_profile_complete": "订阅更新结束",
+  "dialog.check_profile_list": "请检查订阅列表文件",
+  "dialog.profile_path_not_in_list": "该订阅路径不在列表",
+  "dialog.network_blocked": "网络访问已被阻断",
+  "dialog.kernel_stopped": "内核停止运行"
+}

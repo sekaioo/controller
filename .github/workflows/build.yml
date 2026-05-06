@@ -1,0 +1,143 @@
+name: build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version name"
+        required: true
+        type: string
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}-${{ inputs.version }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.config.name }}
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - { name: "MSVC shared", preset: "x64-msvc-release-shared", artifact: "windows-x64-shared" }
+          - { name: "MSVC static", preset: "x64-msvc-release-static", artifact: "windows-x64-static" }
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: choco install ninja
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+          vcpkgGitCommitId: 'a0b74c122a9e955e0a2f5404ddcad04659cd85e7'
+
+      - name: Set up MSVC Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure CMake
+        run: cmake --preset ${{ matrix.config.preset }}
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.config.preset }}
+
+      - name: Prepare release files
+        if: github.event_name == 'workflow_dispatch'
+        shell: powershell
+        run: |
+          $releaseDir = "release-temp/${{ matrix.config.artifact }}"
+          $exeFile = "out/build/${{ matrix.config.preset }}/Controller.exe"
+          New-Item -ItemType Directory -Force -Path $releaseDir
+          Copy-Item $exeFile -Destination $releaseDir
+          Write-Host "Packaged Executable: Controller.exe"
+
+      - name: Upload build artifacts
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.config.artifact }}
+          path: release-temp/${{ matrix.config.artifact }}/
+          if-no-files-found: error
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Prepare release assets
+        shell: bash
+        run: |
+          for dir in artifacts/*/; do
+            dir_name=$(basename "$dir")
+            archive_name="controller-${{ inputs.version }}-${dir_name}.zip"
+            (cd "$dir" && zip -r "../../${archive_name}" .)
+            echo "Created release asset: ${archive_name}"
+          done
+
+      - name: Attest build provenance (release archives)
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: './*.zip'
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ inputs.version }}
+          files: ./*.zip
+          generate_release_notes: false
+          body: |
+            ## Downloads
+
+            - **MSVC shared Build**: `controller-${{ inputs.version }}-windows-x64-shared.zip`  
+              Built with MSVC. Dynamically links to the C/C++ runtime (CRT).
+              Requires the [Microsoft Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe) to be installed.
+
+            - **MSVC static Build**: `controller-${{ inputs.version }}-windows-x64-static.zip`  
+              Built with MSVC. Statically links all dependencies into a single executable (no runtime dependencies).
+
+            ## Provenance verification
+
+            Every binary and release archive is signed with a [SLSA provenance attestation](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations/using-artifact-attestations-to-establish-provenance-for-builds).
+            You can verify that a downloaded archive was produced by this repository's official CI pipeline:
+
+            ```bash
+            gh attestation verify controller-${{ inputs.version }}-windows-x64-shared.zip --repo ${{ github.repository }}
+            gh attestation verify controller-${{ inputs.version }}-windows-x64-static.zip --repo ${{ github.repository }}
+            ```
+
+          prerelease: ${{ contains(inputs.version, '-') }}
+
+  cleanup:
+    name: Cleanup old artifacts
+    runs-on: ubuntu-latest
+    if: always() && github.event_name == 'workflow_dispatch'
+    needs: [ build, release ]
+    steps:
+      - name: Delete old artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: |
+            windows-x64-shared
+            windows-x64-static
+          failOnError: false

@@ -1,0 +1,18 @@
+{
+  "tray.exit_app": "Exit",
+  "tray.stop_kernel": "Stop kernel",
+  "tray.start_kernel": "Start kernel",
+  "tray.update_profile": "Update profile",
+  "tray.switch_profile": "Switch profile",
+  "dialog.error": "Error",
+  "dialog.path_error": "Path Error",
+  "dialog.complete": "Complete",
+  "dialog.hint": "Hint",
+  "dialog.start_kernel_failed": "Failed to start kernel.",
+  "dialog.stop_kernel_failed": "Failed to stop kernel",
+  "dialog.update_profile_complete": "Profile update complete",
+  "dialog.check_profile_list": "Please check the profile list file",
+  "dialog.profile_path_not_in_list": "The profile path is not in the list",
+  "dialog.network_blocked": "Network access has been blocked",
+  "dialog.kernel_stopped": "kernel has stopped"
+}

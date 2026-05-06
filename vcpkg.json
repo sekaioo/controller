@@ -1,0 +1,8 @@
+{
+  "name": "controller",
+  "version": "1.5.5",
+  "builtin-baseline": "a0b74c122a9e955e0a2f5404ddcad04659cd85e7",
+  "dependencies": [
+    "rapidjson"
+  ]
+}

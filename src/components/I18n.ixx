@@ -1,0 +1,94 @@
+module;
+#include <rapidjson/document.h>
+#include <rapidjson/istreamwrapper.h>
+
+#include <filesystem>
+#include <format>
+#include <fstream>
+#include <string>
+
+#include "constants.h"
+
+export module components.I18n;
+
+import common.Utils;
+import components.Config;
+
+using namespace std;
+namespace fs = std::filesystem;
+
+export class I18n {
+public:
+    // 获取单例实例
+    static I18n& instance();
+
+    // 加载指定语言的 json 文件
+    void initialize() const;
+
+    // 获取 key 对应的 value
+    [[nodiscard]] string get(string_view key) const;
+
+    // 禁用拷贝和移动操作 @formatter:off
+    I18n(const I18n&) = delete;
+    I18n& operator=(const I18n&) = delete;
+    I18n(I18n&&) = delete;
+    I18n& operator=(I18n&&) = delete;
+    // @formatter:on
+
+private:
+    // 构造与析构函数
+    I18n();
+
+    ~I18n() = default;
+
+    unique_ptr<rapidjson::Document> json_;
+    static constexpr string_view file_format = "{}{}.json";
+    static constexpr string_view missing_key_format_ = "MISSING KEY: {}";
+};
+
+export inline string tr(string_view key) {
+    return I18n::instance().get(key);
+}
+
+export inline wstring wtr(string_view key) {
+    return utf8_to_wide(I18n::instance().get(key));
+}
+
+I18n& I18n::instance() {
+    static I18n instance;
+    return instance;
+}
+
+void I18n::initialize() const {
+    const string language_code = Config::instance().get_lang();
+    const fs::path file_name = format(file_format, LANG_DIR, language_code);
+
+    ifstream file(file_name);
+    if(!file.is_open()) {
+        throw runtime_error("Could not open file " + file_name.string());
+    }
+
+    // json 处理
+    rapidjson::IStreamWrapper isw(file);
+    json_->ParseStream(isw);
+
+    // 检查 json
+    if(json_->HasParseError()) {
+        throw runtime_error("JSON parse error");
+    }
+    if(!json_->IsObject()) {
+        throw runtime_error("JSON Format error");
+    }
+}
+
+string I18n::get(string_view key) const {
+    if(json_->HasMember(key.data())) {
+        if(const auto& value = (*json_)[key.data()]; value.IsString()) {
+            return value.GetString();
+        }
+    }
+    // 返回错误信息
+    return format(missing_key_format_, key);
+}
+
+I18n::I18n() : json_(make_unique<rapidjson::Document>()) { json_->SetObject(); }
