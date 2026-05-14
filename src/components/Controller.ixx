@@ -1,9 +1,11 @@
 module;
 #include <windows.h>
 
-#include <sstream>
 #include <format>
 #include <memory>
+#include <mutex>
+#include <queue>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -26,12 +28,12 @@ using namespace std;
 
 export class Controller {
 public:
-    // 构造与析构函数 @formatter:off
-    explicit Controller(HINSTANCE instance_handle)
-    : main_window_(nullptr),
-      instance_handle_(instance_handle),
-      service_(make_shared<KernelService>()),
-      tray_manager_(make_unique<TrayManager>(service_)) { initialize(); }
+    // @formatter:off
+    explicit Controller(HINSTANCE instance_handle) :
+        main_window_(nullptr), instance_handle_(instance_handle), service_(make_shared<KernelService>()),
+        tray_manager_(make_unique<TrayManager>(service_)) {
+        initialize();
+    }
     ~Controller() = default;
     bool initialize();
 
@@ -52,10 +54,14 @@ private:
     void on_exit() const;
     // @formatter:on
 
-    HWND main_window_;                      // 主窗口句柄
-    HINSTANCE instance_handle_;             // 实例句柄
-    shared_ptr<KernelService> service_;     // 内核控制器
-    unique_ptr<TrayManager> tray_manager_;  // 托盘管理器
+    string pop_error_message() const;
+
+    HWND main_window_;                     // 主窗口句柄
+    HINSTANCE instance_handle_;            // 实例句柄
+    shared_ptr<KernelService> service_;    // 内核控制器
+    unique_ptr<TrayManager> tray_manager_; // 托盘管理器
+    mutable queue<string> error_queue_;    // 后台线程错误消息队列
+    mutable mutex error_queue_mutex_;      // 保护 error_queue_
 };
 
 bool Controller::initialize() {
@@ -100,9 +106,8 @@ LRESULT CALLBACK Controller::window_proc(HWND hWnd, UINT msg, WPARAM wParam, LPA
         const CREATESTRUCT* pCreate = reinterpret_cast<CREATESTRUCT*>(lParam);
         pController = static_cast<Controller*>(pCreate->lpCreateParams);
         SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pController));
-    } else {
+    } else
         pController = reinterpret_cast<Controller*>(GetWindowLongPtrW(hWnd, GWLP_USERDATA));
-    }
 
     if(pController)
         return pController->handle_message(hWnd, msg, wParam, lParam);
@@ -160,14 +165,13 @@ LRESULT Controller::handle_message(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
             break;
 
         // 订阅更新错误
-        case WM_PROFILE_UPDATE_ERROR:
-            if(const auto* error_msg = reinterpret_cast<string*>(wParam)) {
-                const wstring err_msg = utf8_to_wide(*error_msg);
+        case WM_PROFILE_UPDATE_ERROR: {
+            const wstring err_msg = utf8_to_wide(pop_error_message());
+            if(!err_msg.empty())
                 MessageBoxW(nullptr, err_msg.c_str(),
-                            wtr("dialog.error").c_str(),MB_ICONERROR);
-                delete error_msg;
-            }
+                            wtr("dialog.error").c_str(), MB_ICONERROR);
             break;
+        }
 
         case WM_CLOSE:
             service_->stop();
@@ -220,7 +224,7 @@ void Controller::handle_menu_command(const int menuId) const {
 void Controller::on_switch_profile(const int profile_index) const {
     const vector<string> profile_name = ProfileManager::get_profile_names();
 
-    if(profile_index < profile_name.size()) {
+    if(profile_index >= 0 && static_cast<size_t>(profile_index) < profile_name.size()) {
         const bool is_running = service_->is_running();
 
         if(is_running)
@@ -242,9 +246,11 @@ void Controller::on_update_profiles() const {
         for(const auto names = ProfileManager::get_profile_names();
             const auto& name : names) {
             if(!ProfileManager::update_profile(name)) {
-                // 更新错误发送消息
-                auto* error_msg = new string(name);
-                PostMessageW(main_window_, WM_PROFILE_UPDATE_ERROR, reinterpret_cast<WPARAM>(error_msg), 0);
+                {
+                    lock_guard lock(error_queue_mutex_);
+                    error_queue_.push(name);
+                }
+                PostMessageW(main_window_, WM_PROFILE_UPDATE_ERROR, 0, 0);
             }
         }
         PostMessageW(main_window_, WM_PROFILE_UPDATE_COMPLETE, 0, 0);
@@ -265,4 +271,12 @@ void Controller::on_stop_service() const {
 
 void Controller::on_exit() const {
     PostMessageW(main_window_, WM_CLOSE, 0, 0);
+}
+
+string Controller::pop_error_message() const {
+    lock_guard lock(error_queue_mutex_);
+    if(error_queue_.empty()) return {};
+    string msg = move(error_queue_.front());
+    error_queue_.pop();
+    return msg;
 }
