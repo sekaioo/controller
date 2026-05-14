@@ -21,7 +21,7 @@ public:
         }
     }
 
-    [[nodiscard]] bool is_run() const { return handle_ != nullptr; }
+    [[nodiscard]] bool acquired() const { return handle_ != nullptr; }
 
     // @formatter:off
     MutexGuard(const MutexGuard&) = delete;

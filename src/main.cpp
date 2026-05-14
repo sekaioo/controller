@@ -1,6 +1,5 @@
 #include <Windows.h>
 
-#include <sstream>
 #include <cstdlib>
 #include <string>
 
@@ -15,6 +14,10 @@ import common.Utils;
 import profile.Manager;
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
+    ScopeGuard unblock_on_exit([] {
+        NetworkBlocker::instance().unblock_network();
+    });
+
     // 加载配置文件和语言
     try {
         Config::instance().initialize();
@@ -22,17 +25,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
 
         // 检查是否已经运行了一个实例
         const MutexGuard mutexGuard(PROGRAM_MUTEX);
-        if(mutexGuard.is_run()) {
+        if(mutexGuard.acquired()) {
             Controller controller(hInstance);
             Controller::run();
         } else
             exit(EXIT_FAILURE);
     } catch(std::exception& msg) {
-        MessageBoxW(nullptr, utf8_to_wide(msg.what()).c_str(), L"error",MB_ICONINFORMATION);
-        NetworkBlocker::instance().unblock_network();
+        MessageBoxW(nullptr, utf8_to_wide(msg.what()).c_str(), L"error", MB_ICONINFORMATION);
         exit(EXIT_FAILURE);
     }
-
-    NetworkBlocker::instance().unblock_network();
     exit(EXIT_SUCCESS);
 }
