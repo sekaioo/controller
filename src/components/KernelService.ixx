@@ -94,9 +94,8 @@ void KernelService::monitor_process(stop_token st) {
 
     switch(wait_result) {
         case WAIT_OBJECT_0 + 0:
-            if(main_window_) {
+            if(main_window_)
                 PostMessageW(main_window_, WM_KERNEL_TERMINATED, 0, 0);
-            }
             break;
 
         case WAIT_OBJECT_0 + 1:
@@ -107,11 +106,9 @@ void KernelService::monitor_process(stop_token st) {
             break;
     }
 
-    // 清理资源 & 更新状态
     NetworkBlocker::instance().block_network();
-    if(HANDLE h = process_handle_.exchange(nullptr)) {
+    if(HANDLE h = process_handle_.exchange(nullptr))
         CloseHandle(h);
-    }
 }
 
 static void stop_process_gracefully(HANDLE process) {

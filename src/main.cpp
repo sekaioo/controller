@@ -25,9 +25,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
         if(mutexGuard.is_run()) {
             Controller controller(hInstance);
             Controller::run();
-        } else {
+        } else
             exit(EXIT_FAILURE);
-        }
     } catch(std::exception& msg) {
         MessageBoxW(nullptr, utf8_to_wide(msg.what()).c_str(), L"error",MB_ICONINFORMATION);
         NetworkBlocker::instance().unblock_network();

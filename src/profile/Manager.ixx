@@ -15,26 +15,21 @@ namespace fs = std::filesystem;
 
 export class ProfileManager {
 public:
-    // 获取订阅名
+    // @formatter:off
     static vector<string> get_profile_names();
-
-    // 切换订阅
     static void switch_profile(string_view profile_name);
-
-    // 更新订阅
     static bool update_profile(string_view profile_name);
+    // @formatter:on
 };
 
 vector<string> ProfileManager::get_profile_names() {
-    return Config::instance().get_profiles_name();
+    return Config::instance().get_profiles_names();
 }
 
 void ProfileManager::switch_profile(string_view profile_name) {
     const string path = Config::instance().get_profile_path(profile_name);
-    // 没有找到
-    if(path.empty()) {
+    if(path.empty())
         throw runtime_error(tr("dialog.profile_path_not_in_list"));
-    }
 
     try {
         const fs::path src_path = format("{}{}", PROFILES_DIR, path);
@@ -57,8 +52,6 @@ void ProfileManager::switch_profile(string_view profile_name) {
 bool ProfileManager::update_profile(const string_view profile_name) {
     const string url = Config::instance().get_profile_url(profile_name);
     const string path = Config::instance().get_profile_path(profile_name);
-
-    // 没有找到
     if(url.empty() || path.empty()) {
         throw runtime_error(tr("dialog.profile_path_not_in_list"));
     }

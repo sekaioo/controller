@@ -18,17 +18,13 @@ using namespace std;
 
 class ComInit {
 public:
+    // @formatter:off
     ComInit() : hr(CoInitializeEx(nullptr, COINIT_MULTITHREADED)) {}
-
-    ~ComInit() {
-        if(SUCCEEDED(hr)) {
-            CoUninitialize();
-        }
-    }
+    ~ComInit() { if(SUCCEEDED(hr)) CoUninitialize(); }
 
     [[nodiscard]] bool is_ok() const { return SUCCEEDED(hr); }
 
-    // 禁用拷贝和移动操作 @formatter:off
+    // 禁用拷贝和移动操作
     ComInit(const ComInit&) = delete;
     ComInit& operator=(const ComInit&) = delete;
     ComInit(ComInit&&) = delete;
@@ -42,22 +38,12 @@ private:
 template<typename T>
 class ComPtr {
 public:
+    // @formatter:off
     ComPtr() = default;
+    ~ComPtr() { if(p) p->Release(); }
 
-    ~ComPtr() {
-        if(p) p->Release();
-    }
-
-    // 禁用拷贝和移动操作 @formatter:off
-    ComPtr(const ComPtr&) = delete;
-    ComPtr& operator=(const ComPtr&) = delete;
-    ComPtr(ComPtr&&) = delete;
-    ComPtr& operator=(ComPtr&&) = delete;
-    // @formatter:on
-
-    [[nodiscard]] T* get() const { return p; }
     T* operator->() const { return p; }
-
+    [[nodiscard]] T* get() const { return p; }
     T** release_and_get_address() {
         if(p) {
             p->Release();
@@ -66,21 +52,24 @@ public:
         return &p;
     }
 
+    ComPtr(const ComPtr&) = delete;
+    ComPtr& operator=(const ComPtr&) = delete;
+    ComPtr(ComPtr&&) = delete;
+    ComPtr& operator=(ComPtr&&) = delete;
+    // @formatter:on
+
 private:
     T* p = nullptr;
 };
 
 export class NetworkBlocker {
 public:
-    // 单例实例
+    // @formatter:off
     static NetworkBlocker& instance();
 
-    // 阻断 or 解除阻断网络
     void block_network() const;
-
     void unblock_network() const;
 
-    // 禁用拷贝和移动操作 @formatter:off
     NetworkBlocker(const NetworkBlocker&) = delete;
     NetworkBlocker& operator=(const NetworkBlocker&) = delete;
     NetworkBlocker(NetworkBlocker&&) = delete;
@@ -88,20 +77,14 @@ public:
     // @formatter:on
 
 private:
+    // @formatter:off
     NetworkBlocker()
-    : enable_block_network_(Config::instance().get_block_network()) {
-        remove_rule();
-    }
+    : enable_block_network_(Config::instance().get_block_network()) { remove_rule(); }
+    ~NetworkBlocker() { remove_rule(); }
 
-    ~NetworkBlocker() {
-        remove_rule();
-    }
-
-    // 添加防火墙规则
     static bool add_rule();
-
-    // 移除防火墙规则
     static bool remove_rule();
+    // @formatter:on
 
     const bool enable_block_network_;  // 是否启用阻断网络功能
     mutable mutex mutex_;              // 互斥锁
@@ -114,26 +97,18 @@ NetworkBlocker& NetworkBlocker::instance() {
 
 void NetworkBlocker::block_network() const {
     lock_guard lock(mutex_);
-
-    // 判断是否需要开启
     if(!enable_block_network_) return;
-
-    // 尝试添加规则
     add_rule();
 }
 
 void NetworkBlocker::unblock_network() const {
     lock_guard lock(mutex_);
-
-    // 尝试移除规则
     remove_rule();
 }
 
 bool NetworkBlocker::add_rule() {
     const ComInit com_init;
-    if(!com_init.is_ok()) {
-        return false;
-    }
+    if(!com_init.is_ok()) return false;
 
     HRESULT hr = S_OK;
     ComPtr<INetFwPolicy2> pNetFwPolicy2;
@@ -149,17 +124,13 @@ bool NetworkBlocker::add_rule() {
 
     // 获取规则集合
     hr = pNetFwPolicy2->get_Rules(pNetFwRules.release_and_get_address());
-    if(FAILED(hr)) {
-        return false;
-    }
+    if(FAILED(hr)) return false;
 
     // 创建新规则实例
     hr = CoCreateInstance(
         __uuidof(NetFwRule), nullptr, CLSCTX_INPROC_SERVER, __uuidof(INetFwRule),
         reinterpret_cast<void**>(pNetFwRule.release_and_get_address()));
-    if(FAILED(hr)) {
-        return false;
-    }
+    if(FAILED(hr)) return false;
 
     // 填充规则属性
     const std::wstring desc = wtr("dialog.network_blocked");
@@ -171,15 +142,12 @@ bool NetworkBlocker::add_rule() {
 
     // 添加规则
     hr = pNetFwRules->Add(pNetFwRule.get());
-
     return SUCCEEDED(hr);
 }
 
 bool NetworkBlocker::remove_rule() {
     const ComInit com_init;
-    if(!com_init.is_ok()) {
-        return false;
-    }
+    if(!com_init.is_ok()) return false;
 
     HRESULT hr = S_OK;
     ComPtr<INetFwPolicy2> pNetFwPolicy2;
@@ -190,18 +158,13 @@ bool NetworkBlocker::remove_rule() {
         __uuidof(NetFwPolicy2), nullptr, CLSCTX_INPROC_SERVER,
         __uuidof(INetFwPolicy2),
         reinterpret_cast<void**>(pNetFwPolicy2.release_and_get_address()));
-    if(FAILED(hr)) {
-        return false;
-    }
+    if(FAILED(hr)) return false;
 
     // 获取规则集合
     hr = pNetFwPolicy2->get_Rules(pNetFwRules.release_and_get_address());
-    if(FAILED(hr)) {
-        return false;
-    }
+    if(FAILED(hr)) return false;
 
     // 移除规则
     hr = pNetFwRules->Remove(_bstr_t(FIREWALL_RULE_NAME));
-
     return SUCCEEDED(hr);
 }

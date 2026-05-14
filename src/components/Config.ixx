@@ -24,29 +24,22 @@ public:
     void initialize() const;
     void save() const;
 
-    // 获取顶级字段的值
     [[nodiscard]] string get_lang() const;
     [[nodiscard]] string get_ua() const;
     [[nodiscard]] bool get_block_network() const;
 
-    // 获取 kernel 字段的值
     [[nodiscard]] string get_kernel_path() const;
     [[nodiscard]] string get_kernel_command() const;
     [[nodiscard]] string get_kernel_config_path() const;
 
-    // 返回 profile 数组所有对象的 name
-    [[nodiscard]] vector<string> get_profiles_name() const;
+    [[nodiscard]] vector<string> get_profiles_names() const;
 
-    // 获取 profile 字段值
     [[nodiscard]] string get_profile_path(string_view profile_name) const;
     [[nodiscard]] string get_profile_url(string_view profile_name) const;
 
-    // 获取 webUi Url
-    [[nodiscard]] string get_webUi_url();
-
+    [[nodiscard]] string get_webUi_url() const;
     void update_webUi_url();
 
-    // 禁用拷贝和移动操作
     Config(const Config&) = delete;
     Config& operator=(const Config&) = delete;
     Config(Config&&) = delete;
@@ -54,21 +47,17 @@ public:
     // @formatter:on
 
 private:
-    // 构造与析构函数
+    // @formatter:off
     Config()
     : json_(make_unique<rapidjson::Document>()),
       config_file_path_(CONFIG_FILE) {}
-
-    ~Config() {
-        if(dirty_) save();
-    }
+    ~Config() { if(dirty_) save(); }
 
     // 返回 profile_name对应 profile 的对象指针, 如果没找到则返回 nullptr
-    [[nodiscard]] const rapidjson::Value* find_profile(
-        string_view profile_name) const;
+    [[nodiscard]] const rapidjson::Value* find_profile(string_view profile_name) const;
 
-    // json 检查函数 @formatter:off
-    void validate_config_file() const;
+    // json 检查函数
+    void validate_config() const;
     void validate_kernel() const;
     void validate_profiles() const;
     // @formatter:on
@@ -76,7 +65,7 @@ private:
     unique_ptr<rapidjson::Document> json_;  // json 数据
     fs::path config_file_path_;             // config 文件路径
     bool dirty_ = false;                    // 需要写入文件标志
-    string webUi_url_;                      // webUi Url
+    string webui_ui_url_;                   // webui Url
 };
 
 export class json_field_error final : public logic_error {
@@ -102,16 +91,12 @@ void Config::initialize() const {
     // json 处理
     rapidjson::IStreamWrapper isw(file);
     json_->ParseStream(isw);
-
-    // 检查 json
     if(json_->HasParseError()) {
         throw runtime_error("JSON parse error");
     }
 
     // 验证配置文件字段
-    validate_config_file();
-
-    // 写入值给 webUi Url
+    validate_config();
     instance().update_webUi_url();
 }
 
@@ -131,11 +116,12 @@ void Config::save() const {
 string Config::get_lang() const { return (*json_)["lang"].GetString(); }
 string Config::get_ua() const { return (*json_)["ua"].GetString(); }
 bool Config::get_block_network() const { return (*json_)["block_network"].GetBool(); }
+
 string Config::get_kernel_path() const { return (*json_)["kernel"]["path"].GetString(); }
 string Config::get_kernel_command() const { return (*json_)["kernel"]["command"].GetString(); }
 string Config::get_kernel_config_path() const { return (*json_)["kernel"]["config_path"].GetString(); }
 
-vector<string> Config::get_profiles_name() const {
+vector<string> Config::get_profiles_names() const {
     vector<string> names;
     const auto& profiles = (*json_)["profiles"];
     names.reserve(profiles.Size());
@@ -160,15 +146,14 @@ string Config::get_profile_url(string_view profile_name) const {
     return "";
 }
 
-string Config::get_webUi_url() { return webUi_url_; }
+string Config::get_webUi_url() const { return webui_ui_url_; }
 
 void Config::update_webUi_url() {
     // 打开内核配置文件
-    const filesystem::path kernel_config_path =
-            instance().get_kernel_config_path();
+    const filesystem::path kernel_config_path = instance().get_kernel_config_path();
     ifstream file(kernel_config_path);
     if(!file.is_open()) {
-        webUi_url_ = "";
+        webui_ui_url_ = "";
         return;
     }
 
@@ -176,15 +161,14 @@ void Config::update_webUi_url() {
     rapidjson::Document json;
     rapidjson::IStreamWrapper isw(file);
     json.ParseStream(isw);
-
     if(json.HasParseError() || !json.IsObject()) {
-        webUi_url_ = "";
+        webui_ui_url_ = "";
         return;
     }
 
     // 检查有无 experimental 键
     if(!json.HasMember("experimental") || !json["experimental"].IsObject()) {
-        webUi_url_ = "";
+        webui_ui_url_ = "";
         return;
     }
 
@@ -192,7 +176,7 @@ void Config::update_webUi_url() {
     const auto& experimental = json["experimental"];
     if(!experimental.HasMember("clash_api") ||
        !experimental["clash_api"].IsObject()) {
-        webUi_url_ = "";
+        webui_ui_url_ = "";
         return;
     }
 
@@ -200,11 +184,11 @@ void Config::update_webUi_url() {
     const auto& clash_api = experimental["clash_api"];
     if(!clash_api.HasMember("external_controller") ||
        !clash_api["external_controller"].IsString()) {
-        webUi_url_ = "";
+        webui_ui_url_ = "";
         return;
     }
 
-    webUi_url_ =
+    webui_ui_url_ =
             format("http://{}", clash_api["external_controller"].GetString());
 }
 
@@ -216,7 +200,7 @@ const rapidjson::Value* Config::find_profile(string_view profile_name) const {
                 return profile["name"].GetString() == profile_name;
             });
 
-    return profile != profiles.end() ? *&profile : nullptr;
+    return profile != profiles.end() ? &(*profile) : nullptr;
 }
 
 // 字段检查辅助函数
@@ -239,7 +223,7 @@ auto is_bool_type = [](const auto& v) { return v.IsBool(); };
 auto is_object_type = [](const auto& v) { return v.IsObject(); };
 auto is_array_type = [](const auto& v) { return v.IsArray(); };
 
-void Config::validate_config_file() const {
+void Config::validate_config() const {
     check_field(*json_, "lang", is_string_type);
     check_field(*json_, "ua", is_string_type);
     check_field(*json_, "block_network", is_bool_type);

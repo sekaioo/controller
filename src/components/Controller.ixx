@@ -26,34 +26,25 @@ using namespace std;
 
 export class Controller {
 public:
-    // 构造与析构函数
+    // 构造与析构函数 @formatter:off
     explicit Controller(HINSTANCE instance_handle)
     : main_window_(nullptr),
       instance_handle_(instance_handle),
       service_(make_shared<KernelService>()),
-      tray_manager_(make_unique<TrayManager>(service_)) {
-        initialize();
-    }
-
+      tray_manager_(make_unique<TrayManager>(service_)) { initialize(); }
     ~Controller() = default;
-
-    // 初始化
     bool initialize();
 
-    // 主消息循环
     static void run();
-
-    // 窗口过程
     static LRESULT CALLBACK window_proc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
-    // 处理窗口消息
     LRESULT handle_message(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) const;
+    // @formatter:on
 
 private:
     // 处理菜单命令
     void handle_menu_command(int menuId) const;
 
-    // 消息处理辅助函数 @formatter:off
+    // @formatter:off
     void on_switch_profile(int profile_index) const;
     void on_update_profiles() const;
     void on_start_service() const;
@@ -102,8 +93,7 @@ void Controller::run() {
     }
 }
 
-LRESULT CALLBACK Controller::window_proc(HWND hWnd, UINT msg, WPARAM wParam,
-                                         LPARAM lParam) {
+LRESULT CALLBACK Controller::window_proc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     Controller* pController = nullptr;
 
     if(msg == WM_NCCREATE) {
@@ -114,10 +104,8 @@ LRESULT CALLBACK Controller::window_proc(HWND hWnd, UINT msg, WPARAM wParam,
         pController = reinterpret_cast<Controller*>(GetWindowLongPtrW(hWnd, GWLP_USERDATA));
     }
 
-    if(pController) {
+    if(pController)
         return pController->handle_message(hWnd, msg, wParam, lParam);
-    }
-
     return DefWindowProcW(hWnd, msg, wParam, lParam);
 }
 
@@ -135,19 +123,17 @@ LRESULT Controller::handle_message(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
             break;
 
         case WM_TIMER:
-            if(tray_manager_->refresh_tray()) {
+            if(tray_manager_->refresh_tray())
                 KillTimer(hWnd, 1);
-            }
             break;
 
         // 托盘图标消息
         case WM_SHOW_MENU:
             if(const auto url = Config::instance().get_webUi_url();
-                lParam == WM_LBUTTONUP && !url.empty()) {
+                lParam == WM_LBUTTONUP && !url.empty())
                 open_url(url);
-            } else if(lParam == WM_RBUTTONUP) {
+            else if(lParam == WM_RBUTTONUP)
                 tray_manager_->show_menu();
-            }
             break;
 
         // 处理菜单命令
@@ -158,12 +144,13 @@ LRESULT Controller::handle_message(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
         // 内核停止运行
         case WM_KERNEL_TERMINATED:
             if(Config::instance().get_block_network()) {
-                wstring err_msg = format(L"{}, {}", wtr("dialog.kernel_stopped"), wtr("dialog.network_blocked"));
-                MessageBoxW(nullptr, err_msg.c_str(), wtr("dialog.hint").c_str(),MB_ICONINFORMATION);
-            } else {
+                wstring err_msg = format(L"{}, {}", wtr("dialog.kernel_stopped"),
+                                         wtr("dialog.network_blocked"));
+                MessageBoxW(nullptr, err_msg.c_str(),
+                            wtr("dialog.hint").c_str(),MB_ICONINFORMATION);
+            } else
                 MessageBoxW(nullptr, wtr("dialog.kernel_stopped").c_str(),
                             wtr("dialog.hint").c_str(), MB_ICONINFORMATION);
-            }
             break;
 
         // 订阅更新完成
@@ -176,7 +163,8 @@ LRESULT Controller::handle_message(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
         case WM_PROFILE_UPDATE_ERROR:
             if(const auto* error_msg = reinterpret_cast<string*>(wParam)) {
                 const wstring err_msg = utf8_to_wide(*error_msg);
-                MessageBoxW(nullptr, err_msg.c_str(), wtr("dialog.error").c_str(),MB_ICONERROR);
+                MessageBoxW(nullptr, err_msg.c_str(),
+                            wtr("dialog.error").c_str(),MB_ICONERROR);
                 delete error_msg;
             }
             break;
@@ -185,6 +173,7 @@ LRESULT Controller::handle_message(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
             service_->stop();
             tray_manager_->cleanup();
             DestroyWindow(hWnd);
+            break;
 
         case WM_DESTROY:
             PostQuitMessage(0);
@@ -199,9 +188,9 @@ LRESULT Controller::handle_message(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
 void Controller::handle_menu_command(const int menuId) const {
     // 处理订阅切换
     try {
-        if(menuId >= IDM_PROFILE_BASE && menuId < IDM_PROFILE_MAX) {
+        if(menuId >= IDM_PROFILE_BASE && menuId < IDM_PROFILE_MAX)
             on_switch_profile(menuId - IDM_PROFILE_BASE);
-        } else {
+        else {
             switch(menuId) {
                 case IDM_UPDATE_PROFILE:
                     on_update_profiles();
@@ -234,19 +223,16 @@ void Controller::on_switch_profile(const int profile_index) const {
     if(profile_index < profile_name.size()) {
         const bool is_running = service_->is_running();
 
-        // 如果服务正在运行，先停止它
-        if(is_running) {
+        if(is_running)
             on_stop_service();
-        }
         try {
             ProfileManager::switch_profile(profile_name[profile_index]);
         } catch(const runtime_error& e) {
             const wstring msg = utf8_to_wide(e.what());
             MessageBoxW(nullptr, msg.c_str(), wtr("dialog.path_error").c_str(),MB_ICONERROR);
         }
-        if(is_running) {
+        if(is_running)
             on_start_service();
-        }
     }
 }
 
@@ -266,17 +252,17 @@ void Controller::on_update_profiles() const {
 }
 
 void Controller::on_start_service() const {
-    if(!service_->start()) {
+    if(!service_->start())
         MessageBoxW(nullptr, wtr("dialog.start_kernel_failed").c_str(),
                     wtr("dialog.error").c_str(), MB_ICONERROR);
-    }
 }
 
 void Controller::on_stop_service() const {
-    if(!service_->stop()) {
+    if(!service_->stop())
         MessageBoxW(nullptr, wtr("dialog.stop_kernel_failed").c_str(),
                     wtr("dialog.error").c_str(), MB_ICONERROR);
-    }
 }
 
-void Controller::on_exit() const { PostMessageW(main_window_, WM_CLOSE, 0, 0); }
+void Controller::on_exit() const {
+    PostMessageW(main_window_, WM_CLOSE, 0, 0);
+}

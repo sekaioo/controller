@@ -19,23 +19,16 @@ using namespace std;
 
 export class TrayManager {
 public:
+    // @formatter:off
     explicit TrayManager(shared_ptr<KernelService> service)
     : service_(move(service)) {}
-
-    // 初始化托盘图标
     bool initialize(HWND main_window, HINSTANCE instance_handle);
 
-    // 注册托盘
     bool register_tray();
-
-    // 刷新托盘
     bool refresh_tray();
-
-    // 显示托盘菜单
     void show_menu() const;
-
-    // 清理资源
     void cleanup();
+    // @formatter:on
 
 private:
     NOTIFYICONDATAW tray_icon_ = {sizeof(NOTIFYICONDATAW)};
@@ -104,4 +97,6 @@ void TrayManager::show_menu() const {
     DestroyMenu(hMenu);
 }
 
-void TrayManager::cleanup() { Shell_NotifyIconW(NIM_DELETE, &tray_icon_); }
+void TrayManager::cleanup() {
+    Shell_NotifyIconW(NIM_DELETE, &tray_icon_);
+}

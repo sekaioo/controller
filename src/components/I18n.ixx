@@ -18,16 +18,12 @@ namespace fs = std::filesystem;
 
 export class I18n {
 public:
-    // 获取单例实例
+    // @formatter:off
     static I18n& instance();
-
-    // 加载指定语言的 json 文件
     void initialize() const;
 
-    // 获取 key 对应的 value
     [[nodiscard]] string get(string_view key) const;
 
-    // 禁用拷贝和移动操作 @formatter:off
     I18n(const I18n&) = delete;
     I18n& operator=(const I18n&) = delete;
     I18n(I18n&&) = delete;
@@ -35,10 +31,11 @@ public:
     // @formatter:on
 
 private:
-    // 构造与析构函数
-    I18n();
-
+    // 构造与析构函数 @formatter:off
+    I18n()
+    : json_(make_unique<rapidjson::Document>()) { json_->SetObject(); }
     ~I18n() = default;
+    // @formatter:on
 
     unique_ptr<rapidjson::Document> json_;
     static constexpr string_view file_format = "{}{}.json";
@@ -63,31 +60,23 @@ void I18n::initialize() const {
     const fs::path file_name = format(file_format, LANG_DIR, language_code);
 
     ifstream file(file_name);
-    if(!file.is_open()) {
+    if(!file.is_open())
         throw runtime_error("Could not open file " + file_name.string());
-    }
 
     // json 处理
     rapidjson::IStreamWrapper isw(file);
     json_->ParseStream(isw);
-
-    // 检查 json
-    if(json_->HasParseError()) {
+    if(json_->HasParseError())
         throw runtime_error("JSON parse error");
-    }
-    if(!json_->IsObject()) {
+    if(!json_->IsObject())
         throw runtime_error("JSON Format error");
-    }
 }
 
 string I18n::get(string_view key) const {
-    if(json_->HasMember(key.data())) {
-        if(const auto& value = (*json_)[key.data()]; value.IsString()) {
+    if(json_->HasMember(key.data()))
+        if(const auto& value = (*json_)[key.data()]; value.IsString())
             return value.GetString();
-        }
-    }
+
     // 返回错误信息
     return format(missing_key_format_, key);
 }
-
-I18n::I18n() : json_(make_unique<rapidjson::Document>()) { json_->SetObject(); }
