@@ -22,9 +22,9 @@ namespace fs = std::filesystem;
 export class KernelService {
 public:
     // @formatter:off
-    KernelService()
-    : kernel_path_(utf8_to_wide(Config::instance().get_kernel_path())),
-      kernel_command_(utf8_to_wide(Config::instance().get_kernel_command())) {}
+    KernelService() :
+        kernel_path_(utf8_to_wide(Config::instance().get_kernel_path())),
+        kernel_command_(utf8_to_wide(Config::instance().get_kernel_command())) {}
     ~KernelService() { stop(); }
 
     bool start();

@@ -48,9 +48,9 @@ public:
 
 private:
     // @formatter:off
-    Config()
-    : json_(make_unique<rapidjson::Document>()),
-      config_file_path_(CONFIG_FILE) {}
+    Config() :
+        json_(make_unique<rapidjson::Document>()),
+        config_file_path_(CONFIG_FILE) {}
     ~Config() { if(dirty_) save(); }
 
     // 返回 profile_name对应 profile 的对象指针, 如果没找到则返回 nullptr

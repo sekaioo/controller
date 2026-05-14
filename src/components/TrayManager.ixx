@@ -20,8 +20,8 @@ using namespace std;
 export class TrayManager {
 public:
     // @formatter:off
-    explicit TrayManager(shared_ptr<KernelService> service)
-    : service_(move(service)) {}
+    explicit TrayManager(shared_ptr<KernelService> service) :
+        service_(move(service)) {}
     bool initialize(HWND main_window, HINSTANCE instance_handle);
 
     bool register_tray();

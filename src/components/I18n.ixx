@@ -32,8 +32,10 @@ public:
 
 private:
     // 构造与析构函数 @formatter:off
-    I18n()
-    : json_(make_unique<rapidjson::Document>()) { json_->SetObject(); }
+    I18n() :
+        json_(make_unique<rapidjson::Document>()) {
+        json_->SetObject();
+    }
     ~I18n() = default;
     // @formatter:on
 

@@ -19,7 +19,8 @@ using namespace std;
 class ComInit {
 public:
     // @formatter:off
-    ComInit() : hr(CoInitializeEx(nullptr, COINIT_MULTITHREADED)) {}
+    ComInit() :
+        hr(CoInitializeEx(nullptr, COINIT_MULTITHREADED)) {}
     ~ComInit() { if(SUCCEEDED(hr)) CoUninitialize(); }
 
     [[nodiscard]] bool is_ok() const { return SUCCEEDED(hr); }
