@@ -4,7 +4,6 @@ module;
 #include <vector>
 
 #include "constants.h"
-
 export module profile.Manager;
 
 import components.Config;

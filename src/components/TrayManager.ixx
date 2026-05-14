@@ -1,13 +1,13 @@
 module;
 #include <windows.h>
 
+#include <sstream>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "resource.h"
-
 export module components.TrayManager;
 
 import components.KernelService;

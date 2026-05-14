@@ -8,7 +8,6 @@ module;
 #include <string>
 
 #include "constants.h"
-
 export module components.I18n;
 
 import common.Utils;

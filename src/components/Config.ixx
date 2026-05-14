@@ -12,7 +12,6 @@ module;
 #include <vector>
 
 #include "constants.h"
-
 export module components.Config;
 
 using namespace std;

@@ -1,6 +1,7 @@
 module;
 #include <windows.h>
 
+#include <sstream>
 #include <format>
 #include <memory>
 #include <stdexcept>
@@ -10,7 +11,6 @@ module;
 
 #include "constants.h"
 #include "resource.h"
-
 export module components.Controller;
 
 import components.Config;

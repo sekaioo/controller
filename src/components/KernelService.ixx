@@ -9,7 +9,6 @@ module;
 #include <thread>
 
 #include "resource.h"
-
 export module components.KernelService;
 
 import components.Config;

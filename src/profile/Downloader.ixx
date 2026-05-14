@@ -1,5 +1,6 @@
 module;
 #include <Windows.h>
+
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 
@@ -9,7 +10,6 @@ module;
 #include <functional>
 #include <mutex>
 #include <string>
-
 export module profile.Downloader;
 
 import components.Config;

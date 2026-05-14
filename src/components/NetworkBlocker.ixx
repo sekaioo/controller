@@ -2,14 +2,13 @@ module;
 #include <comutil.h>
 #include <netfw.h>
 
+#include <sstream>
 #include <mutex>
 
 #include "constants.h"
 
-// 链接必要的 COM 库
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "oleaut32.lib")
-
 export module components.NetworkBlocker;
 
 import components.Config;
@@ -27,7 +26,7 @@ public:
         }
     }
 
-    [[nodiscard]] boolean is_ok() const { return SUCCEEDED(hr); }
+    [[nodiscard]] bool is_ok() const { return SUCCEEDED(hr); }
 
     // 禁用拷贝和移动操作 @formatter:off
     ComInit(const ComInit&) = delete;
