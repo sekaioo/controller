@@ -12,6 +12,7 @@ module;
 
 #include "constants.h"
 #include "resource.h"
+
 export module components.Service;
 
 import components.Config;

@@ -2,13 +2,14 @@ module;
 #include <comutil.h>
 #include <netfw.h>
 
-#include <sstream>
 #include <mutex>
+#include <sstream>
 
 #include "constants.h"
 
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "oleaut32.lib")
+
 export module components.NetworkBlocker;
 
 import components.Config;

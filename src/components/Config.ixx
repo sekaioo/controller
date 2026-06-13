@@ -4,8 +4,8 @@ module;
 
 #include <filesystem>
 #include <fstream>
-#include <stdexcept>
 #include <map>
+#include <stdexcept>
 
 export module components.Config;
 
