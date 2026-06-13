@@ -8,7 +8,7 @@
 
 import components.Config;
 import components.I18n;
-import components.Controller;
+import components.Service;
 import components.NetworkBlocker;
 import common.Common;
 import common.Utils;
@@ -31,8 +31,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
         // 检查是否已经运行了一个实例
         const MutexGuard mutexGuard(PROGRAM_MUTEX);
         if(mutexGuard.acquired()) {
-            Controller controller(hInstance, config);
-            Controller::run();
+            Service service(hInstance, config);
+            Service::run();
         } else
             exit(EXIT_FAILURE);
     } catch(std::exception& msg) {

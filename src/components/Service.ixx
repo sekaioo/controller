@@ -12,7 +12,7 @@ module;
 
 #include "constants.h"
 #include "resource.h"
-export module components.Controller;
+export module components.Service;
 
 import components.Config;
 import components.I18n;
@@ -26,9 +26,9 @@ import profile.Downloader;
 using namespace std;
 
 // @formatter:off
-export class Controller {
+export class Service {
 public:
-    explicit Controller(HINSTANCE instance_handle, Config& config) :
+    explicit Service(HINSTANCE instance_handle, Config& config) :
         config_ (config),
         main_window_(nullptr),
         instance_handle_(instance_handle),
@@ -36,7 +36,7 @@ public:
         tray_manager_(make_unique<TrayManager>(service_)) {
         initialize();
     }
-    ~Controller() = default;
+    ~Service() = default;
     bool initialize();
 
     static void run();
@@ -62,7 +62,7 @@ private:
 };
 // @formatter:on
 
-bool Controller::initialize() {
+bool Service::initialize() {
     // 注册窗口类
     WNDCLASSEXW window_class = {sizeof(WNDCLASSEXW)};
     window_class.style = 0;
@@ -89,7 +89,7 @@ bool Controller::initialize() {
     return true;
 }
 
-void Controller::run() {
+void Service::run() {
     MSG msg;
     while(GetMessageW(&msg, nullptr, 0, 0)) {
         TranslateMessage(&msg);
@@ -97,22 +97,22 @@ void Controller::run() {
     }
 }
 
-LRESULT CALLBACK Controller::window_proc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    Controller* pController = nullptr;
+LRESULT CALLBACK Service::window_proc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    Service* pController = nullptr;
 
     if(msg == WM_NCCREATE) {
         const CREATESTRUCT* pCreate = reinterpret_cast<CREATESTRUCT*>(lParam);
-        pController = static_cast<Controller*>(pCreate->lpCreateParams);
+        pController = static_cast<Service*>(pCreate->lpCreateParams);
         SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pController));
     } else
-        pController = reinterpret_cast<Controller*>(GetWindowLongPtrW(hWnd, GWLP_USERDATA));
+        pController = reinterpret_cast<Service*>(GetWindowLongPtrW(hWnd, GWLP_USERDATA));
 
     if(pController)
         return pController->handle_message(hWnd, msg, wParam, lParam);
     return DefWindowProcW(hWnd, msg, wParam, lParam);
 }
 
-LRESULT Controller::handle_message(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) const {
+LRESULT Service::handle_message(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) const {
     // explorer 崩溃时刷新托盘
     static UINT WM_TASKBARCREATED = RegisterWindowMessageW(L"TaskbarCreated");
     if(msg == WM_TASKBARCREATED) {
@@ -184,7 +184,7 @@ LRESULT Controller::handle_message(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
     return 0;
 }
 
-void Controller::handle_menu_command(const int menuId) const {
+void Service::handle_menu_command(const int menuId) const {
     // 处理订阅切换
     try {
         if(menuId >= IDM_PROFILE_BASE && menuId < IDM_PROFILE_MAX)
@@ -216,7 +216,7 @@ void Controller::handle_menu_command(const int menuId) const {
     }
 }
 
-void Controller::on_switch_profile(const int profile_index) const {
+void Service::on_switch_profile(const int profile_index) const {
     if(profile_index >= 0 && static_cast<size_t>(profile_index) < ProfileManager::profiles_names.size()) {
         const bool is_running = service_->is_running();
 
@@ -235,7 +235,7 @@ void Controller::on_switch_profile(const int profile_index) const {
     }
 }
 
-void Controller::on_update_profiles() const {
+void Service::on_update_profiles() const {
     // 启动一个后台线程来执行更新任务
     thread([this] {
         for(const auto names = ProfileManager::profiles_names;
@@ -255,23 +255,23 @@ void Controller::on_update_profiles() const {
     }).detach();
 }
 
-void Controller::on_start_service() const {
+void Service::on_start_service() const {
     if(!service_->start())
         MessageBoxW(nullptr, wtr("dialog.start_kernel_failed").c_str(),
                     wtr("dialog.error").c_str(), MB_ICONERROR);
 }
 
-void Controller::on_stop_service() const {
+void Service::on_stop_service() const {
     if(!service_->stop())
         MessageBoxW(nullptr, wtr("dialog.stop_kernel_failed").c_str(),
                     wtr("dialog.error").c_str(), MB_ICONERROR);
 }
 
-void Controller::on_exit() const {
+void Service::on_exit() const {
     PostMessageW(main_window_, WM_CLOSE, 0, 0);
 }
 
-string Controller::pop_error_message() const {
+string Service::pop_error_message() const {
     lock_guard lock(error_queue_mutex_);
     if(error_queue_.empty()) return {};
     string msg = move(error_queue_.front());
