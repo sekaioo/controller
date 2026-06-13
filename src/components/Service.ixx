@@ -44,14 +44,13 @@ public:
     static LRESULT CALLBACK window_proc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
     LRESULT handle_message(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) const;
 private:
-    // 处理菜单命令
     void handle_menu_command(int menuId) const;
+    string pop_error_message() const;
     void on_switch_profile(int profile_index) const;
     void on_update_profiles() const;
     void on_start_service() const;
     void on_stop_service() const;
     void on_exit() const;
-    string pop_error_message() const;
 
     Config& config_;
     HWND main_window_;
@@ -217,6 +216,14 @@ void Service::handle_menu_command(const int menuId) const {
     }
 }
 
+string Service::pop_error_message() const {
+    lock_guard lock(error_queue_mutex_);
+    if(error_queue_.empty()) return {};
+    string msg = move(error_queue_.front());
+    error_queue_.pop();
+    return msg;
+}
+
 void Service::on_switch_profile(const int profile_index) const {
     if(profile_index >= 0 && static_cast<size_t>(profile_index) < ProfileManager::profiles_names.size()) {
         const bool is_running = service_->is_running();
@@ -270,12 +277,4 @@ void Service::on_stop_service() const {
 
 void Service::on_exit() const {
     PostMessageW(main_window_, WM_CLOSE, 0, 0);
-}
-
-string Service::pop_error_message() const {
-    lock_guard lock(error_queue_mutex_);
-    if(error_queue_.empty()) return {};
-    string msg = move(error_queue_.front());
-    error_queue_.pop();
-    return msg;
 }

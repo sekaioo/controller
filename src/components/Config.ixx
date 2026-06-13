@@ -74,9 +74,8 @@ void Config::populate(const rapidjson::Document& doc) {
 
 // 字段检查辅助函数
 template<typename TypeChecker>
-static void check_field(const rapidjson::Value& object, string_view field,
-                        TypeChecker checker, string_view error_prefix = "") {
-    // 检查 json
+static void check_field(const rapidjson::Value& object, string_view field, TypeChecker checker,
+                        string_view error_prefix = "") {
     if(!object.HasMember(field.data())) {
         constexpr auto missing_key_format = "Missing required field: {}{}";
         throw runtime_error(format(missing_key_format, error_prefix, field));
@@ -99,8 +98,8 @@ void Config::validate_config(const rapidjson::Document& doc) {
     check_field(doc, "kernel", is_object_type);
     check_field(doc, "profiles", is_object_type);
 
-    validate_kernel(doc);    // 检查 kernel 字段
-    validate_profiles(doc);  // 检查 profile 字段
+    validate_kernel(doc);
+    validate_profiles(doc);
 }
 
 void Config::validate_kernel(const rapidjson::Document& doc) {

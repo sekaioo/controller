@@ -17,33 +17,28 @@ import components.Config;
 using namespace std;
 namespace fs = std::filesystem;
 
+// @formatter:off
 export class I18n {
 public:
-    // @formatter:off
+
     static I18n& instance();
     void initialize(string_view code) const;
-
     [[nodiscard]] string get(string_view key) const;
-
     I18n(const I18n&) = delete;
     I18n& operator=(const I18n&) = delete;
     I18n(I18n&&) = delete;
     I18n& operator=(I18n&&) = delete;
-    // @formatter:on
-
 private:
-    // 构造与析构函数 @formatter:off
     I18n() :
         json_(make_unique<rapidjson::Document>()) {
         json_->SetObject();
     }
     ~I18n() = default;
-    // @formatter:on
-
     unique_ptr<rapidjson::Document> json_;
     static constexpr string_view file_format = "{}{}.json";
     static constexpr string_view missing_key_format_ = "MISSING KEY: {}";
 };
+// @formatter:on
 
 export inline string tr(string_view key) {
     return I18n::instance().get(key);
@@ -65,7 +60,6 @@ void I18n::initialize(string_view code) const {
     if(!file.is_open())
         throw runtime_error("Could not open file " + file_name.string());
 
-    // json 处理
     rapidjson::IStreamWrapper isw(file);
     json_->ParseStream(isw);
     if(json_->HasParseError())
@@ -79,6 +73,5 @@ string I18n::get(string_view key) const {
         if(const auto& value = (*json_)[key.data()]; value.IsString())
             return value.GetString();
 
-    // 返回错误信息
     return format(missing_key_format_, key);
 }

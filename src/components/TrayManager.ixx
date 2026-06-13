@@ -18,9 +18,9 @@ import profile.Manager;
 
 using namespace std;
 
+// @formatter:off
 export class TrayManager {
 public:
-    // @formatter:off
     explicit TrayManager(shared_ptr<KernelService> service) :
         service_(move(service)) {}
     bool initialize(HWND main_window, HINSTANCE instance_handle);
@@ -29,14 +29,13 @@ public:
     bool refresh_tray();
     void show_menu() const;
     void cleanup();
-    // @formatter:on
-
 private:
     NOTIFYICONDATAW tray_icon_ = {sizeof(NOTIFYICONDATAW)};
     HWND main_window_ = nullptr;
     HINSTANCE instance_handle_ = nullptr;
     shared_ptr<KernelService> service_ = nullptr;
 };
+// @formatter:on
 
 bool TrayManager::initialize(HWND main_window, HINSTANCE instance_handle) {
     main_window_ = main_window;

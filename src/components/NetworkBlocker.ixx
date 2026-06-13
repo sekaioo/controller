@@ -17,30 +17,27 @@ import components.I18n;
 
 using namespace std;
 
+// @formatter:off
 class ComInit {
 public:
-    // @formatter:off
     ComInit() :
         hr(CoInitializeEx(nullptr, COINIT_MULTITHREADED)) {}
     ~ComInit() { if(SUCCEEDED(hr)) CoUninitialize(); }
 
     [[nodiscard]] bool is_ok() const { return SUCCEEDED(hr); }
-
-    // 禁用拷贝和移动操作
     ComInit(const ComInit&) = delete;
     ComInit& operator=(const ComInit&) = delete;
     ComInit(ComInit&&) = delete;
     ComInit& operator=(ComInit&&) = delete;
-    //@formatter:on
-
 private:
     HRESULT hr;
 };
+//@formatter:on
 
+// @formatter:off
 template<typename T>
 class ComPtr {
 public:
-    // @formatter:off
     ComPtr() = default;
     ~ComPtr() { if(p) p->Release(); }
 
@@ -53,16 +50,14 @@ public:
         }
         return &p;
     }
-
     ComPtr(const ComPtr&) = delete;
     ComPtr& operator=(const ComPtr&) = delete;
     ComPtr(ComPtr&&) = delete;
     ComPtr& operator=(ComPtr&&) = delete;
-    // @formatter:on
-
 private:
     T* p = nullptr;
 };
+// @formatter:on
 
 // @formatter:off
 export class NetworkBlocker {

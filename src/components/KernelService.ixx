@@ -20,9 +20,9 @@ import common.Common;
 using namespace std;
 namespace fs = std::filesystem;
 
+// @formatter:off
 export class KernelService {
 public:
-    // @formatter:off
     KernelService() = default;
     ~KernelService() { stop(); }
     bool start(wstring&& kernel_path, wstring&& kernel_command);
@@ -30,8 +30,6 @@ public:
     bool is_running() const { return process_handle_.load() != nullptr; }
     HANDLE get_process_handle() const { return process_handle_.load(); }
     void register_observer(HWND main_window) { main_window_ = main_window; }
-    // @formatter:on
-
 private:
     void monitor_process(stop_token st);
 
@@ -39,13 +37,14 @@ private:
     jthread monitor_thread_;
     HWND main_window_ = nullptr;
 };
+// @formatter:on
 
 bool KernelService::start(wstring&& kernel_path, wstring&& kernel_command) {
     if(is_running()) return true;
 
-    static const wstring executable_dir = get_executable_directory();
-    static const wstring full_kernel_path = format(L"{}/{}", executable_dir, kernel_path);
-    static const wstring service_dir = fs::path(full_kernel_path).parent_path().wstring();
+    const wstring executable_dir = get_executable_directory();
+    const wstring full_kernel_path = format(L"{}/{}", executable_dir, kernel_path);
+    const wstring service_dir = fs::path(full_kernel_path).parent_path().wstring();
 
     HANDLE raw_handle = launch_hidden_process(
         kernel_command.c_str(), full_kernel_path.c_str(), service_dir.c_str()

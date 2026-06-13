@@ -5,7 +5,7 @@ module;
 
 export module common.Common;
 
-// 适用于 windows 的程序互斥锁
+// @formatter:off
 export class MutexGuard {
 public:
     explicit MutexGuard(const wchar_t* name) {
@@ -15,24 +15,19 @@ public:
             handle_ = nullptr;
         }
     }
-
     ~MutexGuard() {
         if(handle_) {
             ReleaseMutex(handle_);
             CloseHandle(handle_);
         }
     }
-
     [[nodiscard]] bool acquired() const { return handle_ != nullptr; }
-
-    // @formatter:off
     MutexGuard(const MutexGuard&) = delete;
     MutexGuard& operator=(const MutexGuard&) = delete;
-    // @formatter:on
-
 private:
     HANDLE handle_;
 };
+// @formatter:on
 
 // @formatter:off
 export struct HandleGuard {

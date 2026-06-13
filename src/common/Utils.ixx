@@ -58,9 +58,3 @@ export wstring get_executable_directory() {
     std::filesystem::path full_path(buffer.data());
     return full_path.parent_path().wstring();
 }
-
-// 打开 URL
-export void open_url(string_view url) {
-    auto open_url = utf8_to_wide(url);
-    ShellExecuteW(nullptr, L"open", open_url.c_str(), nullptr, nullptr,SW_SHOWNORMAL);
-}
