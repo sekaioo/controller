@@ -20,7 +20,7 @@ export class I18n {
 public:
     // @formatter:off
     static I18n& instance();
-    void initialize() const;
+    void initialize(string_view code) const;
 
     [[nodiscard]] string get(string_view key) const;
 
@@ -57,9 +57,8 @@ I18n& I18n::instance() {
     return instance;
 }
 
-void I18n::initialize() const {
-    const string language_code = Config::instance().get_lang();
-    const fs::path file_name = format(file_format, LANG_DIR, language_code);
+void I18n::initialize(string_view code) const {
+    const fs::path file_name = format(file_format, LANG_DIR, code);
 
     ifstream file(file_name);
     if(!file.is_open())

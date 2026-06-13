@@ -22,14 +22,12 @@ namespace fs = std::filesystem;
 export class KernelService {
 public:
     // @formatter:off
-    KernelService() :
-        kernel_path_(utf8_to_wide(Config::instance().get_kernel_path())),
-        kernel_command_(utf8_to_wide(Config::instance().get_kernel_command())) {}
+    KernelService(string_view path, string_view command) :
+        kernel_path_(utf8_to_wide(path)),
+        kernel_command_(utf8_to_wide(command)) {}
     ~KernelService() { stop(); }
-
     bool start();
     bool stop();
-
     bool is_running() const { return process_handle_.load() != nullptr; }
     HANDLE get_process_handle() const { return process_handle_.load(); }
     void register_observer(HWND main_window) { main_window_ = main_window; }

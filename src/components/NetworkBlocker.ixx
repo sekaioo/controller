@@ -63,37 +63,36 @@ private:
     T* p = nullptr;
 };
 
+// @formatter:off
 export class NetworkBlocker {
 public:
-    // @formatter:off
     static NetworkBlocker& instance();
-
+    static void initialize(bool enable_block_network) ;
     void block_network() const;
     void unblock_network() const;
-
     NetworkBlocker(const NetworkBlocker&) = delete;
     NetworkBlocker& operator=(const NetworkBlocker&) = delete;
     NetworkBlocker(NetworkBlocker&&) = delete;
     NetworkBlocker& operator=(NetworkBlocker&&) = delete;
-    // @formatter:on
-
 private:
-    // @formatter:off
-    NetworkBlocker()
-    : enable_block_network_(Config::instance().get_block_network()) { remove_rule(); }
+    NetworkBlocker() {
+        remove_rule();
+    }
     ~NetworkBlocker() { remove_rule(); }
-
     static bool add_rule();
     static bool remove_rule();
-    // @formatter:on
-
-    const bool enable_block_network_;  // 是否启用阻断网络功能
-    mutable mutex mutex_;              // 互斥锁
+    inline static bool enable_block_network_;
+    mutable mutex mutex_;
 };
+// @formatter:on
 
 NetworkBlocker& NetworkBlocker::instance() {
     static NetworkBlocker instance;
     return instance;
+}
+
+void NetworkBlocker::initialize(bool enable_block_network) {
+    enable_block_network_ = enable_block_network;
 }
 
 void NetworkBlocker::block_network() const {

@@ -21,13 +21,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
 
     // 加载配置文件和语言
     try {
-        Config::instance().initialize();
-        I18n::instance().initialize();
-
+        Config config;
+        config.load(CONFIG_FILE);
+        {
+            I18n::instance().initialize(config.lang);
+            NetworkBlocker::initialize(config.block_network);
+            ProfileManager::initialize(config.profiles);
+        }
         // 检查是否已经运行了一个实例
         const MutexGuard mutexGuard(PROGRAM_MUTEX);
         if(mutexGuard.acquired()) {
-            Controller controller(hInstance);
+            Controller controller(hInstance, config);
             Controller::run();
         } else
             exit(EXIT_FAILURE);

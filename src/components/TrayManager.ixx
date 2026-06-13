@@ -66,7 +66,7 @@ void TrayManager::show_menu() const {
     HMENU hSubMenu = CreatePopupMenu();
 
     // 填充订阅子菜单
-    vector<string> names = ProfileManager::get_profile_names();
+    vector<string> names = ProfileManager::profiles_names;
     for(size_t i = 0; i < names.size() && i < IDM_PROFILE_MAX; ++i) {
         wstring name = utf8_to_wide(names[i]);
         AppendMenuW(hSubMenu, MF_STRING, IDM_PROFILE_BASE + i, name.c_str());

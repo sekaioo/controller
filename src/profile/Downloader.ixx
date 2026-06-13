@@ -28,8 +28,7 @@ static optional<DWORD> wait_for_exit(HANDLE process, DWORD timeout_ms);
 static bool is_valid_json(const fs::path& path);
 //@formatter:on
 
-export bool download_profile(string_view target_url, const fs::path& target_path) {
-    static const wstring ua = utf8_to_wide(Config::instance().get_ua());
+export bool download_profile(string_view target_url, string_view ua, const fs::path& target_path) {
     const fs::path temp_path = make_temp_path();
 
     // 清理临时文件
@@ -37,7 +36,11 @@ export bool download_profile(string_view target_url, const fs::path& target_path
     ScopeGuard on_exit(temp_cleanup);
 
     // 启动 curl 子进程
-    wstring command = format(CURL_COMMAND, ua, temp_path.wstring(), utf8_to_wide(target_url.data()));
+    wstring command = format(CURL_COMMAND,
+                             utf8_to_wide(std::string(ua)),
+                             temp_path.wstring(),
+                             utf8_to_wide(target_url.data())
+    );
     HANDLE raw_handle = launch_hidden_process(command.c_str());
     if(!raw_handle) return false;
     HandleGuard process{raw_handle};

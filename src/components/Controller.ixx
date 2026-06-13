@@ -5,7 +5,6 @@ module;
 #include <memory>
 #include <mutex>
 #include <queue>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -26,11 +25,14 @@ import profile.Downloader;
 
 using namespace std;
 
+// @formatter:off
 export class Controller {
 public:
-    // @formatter:off
-    explicit Controller(HINSTANCE instance_handle) :
-        main_window_(nullptr), instance_handle_(instance_handle), service_(make_shared<KernelService>()),
+    explicit Controller(HINSTANCE instance_handle, Config& config) :
+        config_ (config),
+        main_window_(nullptr),
+        instance_handle_(instance_handle),
+        service_(make_shared<KernelService>(config.kernel.path, config.kernel.command)),
         tray_manager_(make_unique<TrayManager>(service_)) {
         initialize();
     }
@@ -40,29 +42,25 @@ public:
     static void run();
     static LRESULT CALLBACK window_proc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
     LRESULT handle_message(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) const;
-    // @formatter:on
-
 private:
     // 处理菜单命令
     void handle_menu_command(int menuId) const;
-
-    // @formatter:off
     void on_switch_profile(int profile_index) const;
     void on_update_profiles() const;
     void on_start_service() const;
     void on_stop_service() const;
     void on_exit() const;
-    // @formatter:on
-
     string pop_error_message() const;
 
-    HWND main_window_;                     // 主窗口句柄
-    HINSTANCE instance_handle_;            // 实例句柄
-    shared_ptr<KernelService> service_;    // 内核控制器
-    unique_ptr<TrayManager> tray_manager_; // 托盘管理器
-    mutable queue<string> error_queue_;    // 后台线程错误消息队列
-    mutable mutex error_queue_mutex_;      // 保护 error_queue_
+    Config& config_;
+    HWND main_window_;
+    HINSTANCE instance_handle_;
+    shared_ptr<KernelService> service_;
+    unique_ptr<TrayManager> tray_manager_;
+    mutable queue<string> error_queue_;
+    mutable mutex error_queue_mutex_;
 };
+// @formatter:on
 
 bool Controller::initialize() {
     // 注册窗口类
@@ -134,10 +132,7 @@ LRESULT Controller::handle_message(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
 
         // 托盘图标消息
         case WM_SHOW_MENU:
-            if(const auto url = Config::instance().get_webUi_url();
-                lParam == WM_LBUTTONUP && !url.empty())
-                open_url(url);
-            else if(lParam == WM_RBUTTONUP)
+            if(lParam == WM_LBUTTONUP || lParam == WM_RBUTTONUP)
                 tray_manager_->show_menu();
             break;
 
@@ -148,7 +143,7 @@ LRESULT Controller::handle_message(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
 
         // 内核停止运行
         case WM_KERNEL_TERMINATED:
-            if(Config::instance().get_block_network()) {
+            if(config_.block_network) {
                 wstring err_msg = format(L"{}, {}", wtr("dialog.kernel_stopped"),
                                          wtr("dialog.network_blocked"));
                 MessageBoxW(nullptr, err_msg.c_str(),
@@ -222,15 +217,15 @@ void Controller::handle_menu_command(const int menuId) const {
 }
 
 void Controller::on_switch_profile(const int profile_index) const {
-    const vector<string> profile_name = ProfileManager::get_profile_names();
-
-    if(profile_index >= 0 && static_cast<size_t>(profile_index) < profile_name.size()) {
+    if(profile_index >= 0 && static_cast<size_t>(profile_index) < ProfileManager::profiles_names.size()) {
         const bool is_running = service_->is_running();
 
-        if(is_running)
-            on_stop_service();
+        if(is_running) on_stop_service();
         try {
-            ProfileManager::switch_profile(profile_name[profile_index]);
+            string profile_name = ProfileManager::get_profile_name(profile_index);
+            string path = config_.profiles[profile_name].path;
+            string kernel_config_path = config_.kernel.config_path;
+            ProfileManager::switch_profile(path, kernel_config_path);
         } catch(const runtime_error& e) {
             const wstring msg = utf8_to_wide(e.what());
             MessageBoxW(nullptr, msg.c_str(), wtr("dialog.path_error").c_str(),MB_ICONERROR);
@@ -243,9 +238,12 @@ void Controller::on_switch_profile(const int profile_index) const {
 void Controller::on_update_profiles() const {
     // 启动一个后台线程来执行更新任务
     thread([this] {
-        for(const auto names = ProfileManager::get_profile_names();
+        for(const auto names = ProfileManager::profiles_names;
             const auto& name : names) {
-            if(!ProfileManager::update_profile(name)) {
+            string ua = config_.ua;
+            string url = config_.profiles[name].url;
+            string path = config_.profiles[name].path;
+            if(!ProfileManager::update_profile(url, ua, path)) {
                 {
                     lock_guard lock(error_queue_mutex_);
                     error_queue_.push(name);

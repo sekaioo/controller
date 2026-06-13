@@ -18,27 +18,6 @@ features, including the ability to add and manage a custom kernel.
 
 ---
 
-## `config.json` **Structure**
-
-> **Note:** `template.json` and `config.json` are located in the `data/` directory  
-> **Note:** Profile files are located in the `data/profiles/` directory
-
-| Field                  | Type     | Description                        |
-|------------------------|----------|------------------------------------|
-| `lang`                 | `string` | Language code (files in `lang/`)   |
-| `ua`                   | `string` | User-Agent for profile downloads   |
-| `block_network`        | `bool`   | Block network when stopping kernel |
-| `kernel`               | `object` | Object of kernel                   |
-| `kernel[].path`        | `string` | Kernel path                        |
-| `kernel[].command`     | `string` | Kernel command                     |
-| `kernel[].config_path` | `string` | Kernel config file                 |
-| `profiles`             | `array`  | Array of profile objects           |
-| `profiles[].name`      | `string` | Display name for profile           |
-| `profiles[].path`      | `string` | Local path to save profile         |
-| `profiles[].url`       | `string` | Update profile URL                 |
-
----
-
 ## config.json example
 
 ```json
@@ -51,23 +30,15 @@ features, including the ability to add and manage a custom kernel.
     "command": "[kernel_command]",
     "config_path": "kernel/[kernel_config_file]"
   },
-  "profile": [
-    {
-      "name": "example",
-      "path": "example.json",
+  "profiles": {
+    "tag1": {
+      "path": "tag1.json",
       "url": "https://example.com"
+    },
+    "tag2": {
+      "path": "tag2.json",
+      "url": "https://example.org"
     }
-  ]
+  }
 }
 ```
-
----
-
-## NOTICE
-
-### Third-Party Libraries
-
-- **[rapidjson](https://rapidjson.org/)**  
-  Copyright (C) 2015 THL A29 Limited, a Tencent company, and Milo Yip. All rights reserved.
-  Licensed under the [MIT License](https://github.com/Tencent/rapidjson/blob/master/license.txt)
-
