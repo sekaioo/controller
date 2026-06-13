@@ -34,16 +34,18 @@ public:
         main_window_(nullptr),
         instance_handle_(instance_handle),
         service_(make_shared<KernelService>()),
-        tray_manager_(make_unique<TrayManager>(service_)) {
-        initialize();
+        tray_manager_(make_unique<TrayManager>(service_)),
+        wm_taskbarcreated_(RegisterWindowMessageW(L"TaskbarCreated")) {
+        if(!initialize())
+            throw runtime_error("Service initialization failed");
     }
     ~Service() = default;
-    bool initialize();
 
-    static void run();
+    void run();
     static LRESULT CALLBACK window_proc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
     LRESULT handle_message(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) const;
 private:
+    bool initialize();
     void handle_menu_command(int menuId) const;
     string pop_error_message() const;
     void on_switch_profile(int profile_index) const;
@@ -59,6 +61,7 @@ private:
     unique_ptr<TrayManager> tray_manager_;
     mutable queue<string> error_queue_;
     mutable mutex error_queue_mutex_;
+    UINT wm_taskbarcreated_;
 };
 // @formatter:on
 
@@ -114,8 +117,7 @@ LRESULT CALLBACK Service::window_proc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
 
 LRESULT Service::handle_message(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) const {
     // explorer 崩溃时刷新托盘
-    static UINT WM_TASKBARCREATED = RegisterWindowMessageW(L"TaskbarCreated");
-    if(msg == WM_TASKBARCREATED) {
+    if(msg == wm_taskbarcreated_) {
         tray_manager_->refresh_tray();
         return 0;
     }

@@ -32,7 +32,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
         const MutexGuard mutexGuard(PROGRAM_MUTEX);
         if(mutexGuard.acquired()) {
             Service service(hInstance, config);
-            Service::run();
+            service.run();
         } else
             exit(EXIT_FAILURE);
     } catch(std::exception& msg) {

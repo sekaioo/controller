@@ -20,7 +20,6 @@ namespace fs = std::filesystem;
 // @formatter:off
 export class I18n {
 public:
-
     static I18n& instance();
     void initialize(string_view code) const;
     [[nodiscard]] string get(string_view key) const;
