@@ -23,11 +23,9 @@ namespace fs = std::filesystem;
 export class KernelService {
 public:
     // @formatter:off
-    KernelService(string_view path, string_view command) :
-        kernel_path_(utf8_to_wide(path)),
-        kernel_command_(utf8_to_wide(command)) {}
+    KernelService() = default;
     ~KernelService() { stop(); }
-    bool start();
+    bool start(wstring&& kernel_path, wstring&& kernel_command);
     bool stop();
     bool is_running() const { return process_handle_.load() != nullptr; }
     HANDLE get_process_handle() const { return process_handle_.load(); }
@@ -37,22 +35,20 @@ public:
 private:
     void monitor_process(stop_token st);
 
-    const wstring kernel_path_;
-    const wstring kernel_command_;
     atomic<HANDLE> process_handle_ = nullptr;
     jthread monitor_thread_;
     HWND main_window_ = nullptr;
 };
 
-bool KernelService::start() {
+bool KernelService::start(wstring&& kernel_path, wstring&& kernel_command) {
     if(is_running()) return true;
 
     static const wstring executable_dir = get_executable_directory();
-    static const wstring kernel_path = format(L"{}/{}", executable_dir, kernel_path_);
-    static const wstring service_dir = fs::path(kernel_path).parent_path().wstring();
+    static const wstring full_kernel_path = format(L"{}/{}", executable_dir, kernel_path);
+    static const wstring service_dir = fs::path(full_kernel_path).parent_path().wstring();
 
     HANDLE raw_handle = launch_hidden_process(
-        kernel_command_.c_str(), kernel_path.c_str(), service_dir.c_str()
+        kernel_command.c_str(), full_kernel_path.c_str(), service_dir.c_str()
     );
 
     if(!raw_handle) {
@@ -77,7 +73,21 @@ bool KernelService::stop() {
     return false;
 }
 
-static void stop_process_gracefully(HANDLE process);
+static void stop_process_gracefully(HANDLE process) {
+    const DWORD pid = GetProcessId(process);
+    if(!AttachConsole(pid)) return;
+
+    SetConsoleCtrlHandler(nullptr, TRUE);
+    GenerateConsoleCtrlEvent(CTRL_C_EVENT, pid);
+    SetConsoleCtrlHandler(nullptr, FALSE);
+    FreeConsole();
+
+    // 等待退出，超时则强制终止
+    if(WaitForSingleObject(process, 8000) == WAIT_TIMEOUT) {
+        TerminateProcess(process, 0);
+        WaitForSingleObject(process, 2000);
+    }
+}
 
 void KernelService::monitor_process(stop_token st) {
     HANDLE proc = process_handle_.load();
@@ -108,20 +118,4 @@ void KernelService::monitor_process(stop_token st) {
     NetworkBlocker::instance().block_network();
     if(HANDLE h = process_handle_.exchange(nullptr))
         CloseHandle(h);
-}
-
-static void stop_process_gracefully(HANDLE process) {
-    const DWORD pid = GetProcessId(process);
-    if(!AttachConsole(pid)) return;
-
-    SetConsoleCtrlHandler(nullptr, TRUE);
-    GenerateConsoleCtrlEvent(CTRL_C_EVENT, pid);
-    SetConsoleCtrlHandler(nullptr, FALSE);
-    FreeConsole();
-
-    // 等待退出，超时则强制终止
-    if(WaitForSingleObject(process, 8000) == WAIT_TIMEOUT) {
-        TerminateProcess(process, 0);
-        WaitForSingleObject(process, 2000);
-    }
 }

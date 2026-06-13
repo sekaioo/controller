@@ -33,7 +33,7 @@ public:
         config_ (config),
         main_window_(nullptr),
         instance_handle_(instance_handle),
-        service_(make_shared<KernelService>(config.kernel.path, config.kernel.command)),
+        service_(make_shared<KernelService>()),
         tray_manager_(make_unique<TrayManager>(service_)) {
         initialize();
     }
@@ -257,7 +257,7 @@ void Service::on_update_profiles() const {
 }
 
 void Service::on_start_service() const {
-    if(!service_->start())
+    if(!service_->start(utf8_to_wide(config_.kernel.path), utf8_to_wide(config_.kernel.command)))
         MessageBoxW(nullptr, wtr("dialog.start_kernel_failed").c_str(),
                     wtr("dialog.error").c_str(), MB_ICONERROR);
 }
