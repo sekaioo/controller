@@ -78,7 +78,8 @@ A top-level `ScopeGuard` guarantees the firewall rule is removed on any exit pat
 - `components.Config` — parses/validates `config.json` with rapidjson; the
   validation helpers (`check_field`, type-predicate lambdas) throw
   `std::runtime_error` with a field path on any missing/mistyped field.
-  `log_level` is the one optional field (level name string, defaults to `ALL`).
+  `log_level` is the one optional field (lowercase level name string, e.g.
+  `"info"`, defaults to `Log::ALL`).
 - `components.I18n` — singleton loading `lang/<code>.json`; use the free
   functions `tr(key)` (UTF-8 `string`) and `wtr(key)` (`wstring`) for all
   user-facing text. Missing keys return `"MISSING KEY: <key>"` rather than throw.
@@ -94,10 +95,13 @@ A top-level `ScopeGuard` guarantees the firewall rule is removed on any exit pat
   `CreateProcessW` wrapper used for both kernel and curl), `get_executable_directory`.
 - `common.Common` — RAII guards: `MutexGuard` (single-instance), `HandleGuard`
   (owns a `HANDLE`), `ScopeGuard` (dismissable cleanup lambda).
-- `components.Logger` — `logger::info/warn/error/fatal` free functions appending
-  to `data/controller.log` (UTF-8, mutex-guarded, rotates to `.log.old` past
-  `LOG_MAX_SIZE`). `logger::set_level(Level)` filters below-threshold messages
-  (`ALL`→`OFF`, default `ALL`). Logging must never throw or affect program flow.
+- `components.Log` — `Log` class (all-static, modeled on trojan's logger):
+  `Log::log_with_date_time(message, Log::INFO)` appends to `data/controller.log`
+  (UTF-8, mutex-guarded, rotates to `.log.old` past `LOG_MAX_SIZE`). The public
+  static `Log::level` is the threshold (`ALL`→`OFF`); messages below it are
+  discarded. Logging must never throw or affect program flow. Consumers that
+  include `windows.h` must `#undef ERROR` in the global module fragment before
+  using `Log::ERROR`.
 
 ## Conventions
 

@@ -1,6 +1,5 @@
 module;
 #include <array>
-#include <atomic>
 #include <chrono>
 #include <filesystem>
 #include <format>
@@ -10,13 +9,14 @@ module;
 
 #include "constants.h"
 
-export module components.Logger;
+export module components.Log;
 
 using namespace std;
 namespace fs = std::filesystem;
 
 // @formatter:off
-export namespace logger {
+export class Log {
+public:
     enum Level {
         ALL = 0,
         INFO = 1,
@@ -25,22 +25,17 @@ export namespace logger {
         FATAL = 4,
         OFF = 5
     };
-
-    void set_level(Level level) noexcept;
-    void info(string_view message) noexcept;
-    void warn(string_view message) noexcept;
-    void error(string_view message) noexcept;
-    void fatal(string_view message) noexcept;
-}
+    // 低于该等级的消息被丢弃, 启动时从 config.log_level 赋值
+    inline static Level level = ALL;
+    static void log_with_date_time(string_view message, Level level = ALL) noexcept;
+private:
+    static void rotate_if_needed();
+    inline static mutex log_mutex_;
+};
 // @formatter:on
 
-constexpr array LEVEL_NAMES = {"ALL", "INFO", "WARN", "ERROR", "FATAL", "OFF"};
-
-static atomic<int> current_level_ = logger::ALL;
-static mutex log_mutex_;
-
 // 超过阈值时轮转: 旧日志顶替 .old, 全程使用不抛异常的重载
-static void rotate_if_needed() {
+void Log::rotate_if_needed() {
     error_code ec;
     if(fs::exists(LOG_FILE, ec) && fs::file_size(LOG_FILE, ec) > LOG_MAX_SIZE) {
         fs::remove(LOG_FILE_OLD, ec);
@@ -49,10 +44,11 @@ static void rotate_if_needed() {
 }
 
 // 写一行日志, 日志绝不能反过来影响程序运行, 任何异常都吞掉
-static void write_line(const logger::Level level, string_view message) noexcept {
-    if(level < current_level_.load(memory_order_relaxed)) return;
+void Log::log_with_date_time(string_view message, const Level message_level) noexcept {
+    if(message_level < level) return;
 
     try {
+        constexpr array level_names = {"ALL", "INFO", "WARN", "ERROR", "FATAL", "OFF"};
         lock_guard lock(log_mutex_);
         rotate_if_needed();
 
@@ -62,18 +58,7 @@ static void write_line(const logger::Level level, string_view message) noexcept 
         const auto now = chrono::floor<chrono::seconds>(chrono::system_clock::now());
         file << format("[{:%Y-%m-%d %H:%M:%S}] [{}] {}\n",
                        chrono::zoned_time{chrono::current_zone(), now},
-                       LEVEL_NAMES[level], message);
+                       level_names[message_level], message);
     } catch(...) {
     }
-}
-
-namespace logger {
-    void set_level(const Level level) noexcept {
-        current_level_.store(level, memory_order_relaxed);
-    }
-
-    void info(string_view message) noexcept { write_line(INFO, message); }
-    void warn(string_view message) noexcept { write_line(WARN, message); }
-    void error(string_view message) noexcept { write_line(ERROR, message); }
-    void fatal(string_view message) noexcept { write_line(FATAL, message); }
 }

@@ -10,10 +10,15 @@ module;
 
 #include "resource.h"
 
+// windows.h 定义的 ERROR 宏与 Log::ERROR 冲突
+#ifdef ERROR
+#undef ERROR
+#endif
+
 export module components.KernelService;
 
 import components.Config;
-import components.Logger;
+import components.Log;
 import components.NetworkBlocker;
 import common.Common;
 import common.Utils;
@@ -69,12 +74,13 @@ bool KernelService::start(wstring&& kernel_path, wstring&& kernel_command) {
     );
 
     if(!raw_handle) {
-        logger::error(format("launch kernel failed, GetLastError={}", GetLastError()));
+        Log::log_with_date_time(
+            format("launch kernel failed, GetLastError={}", GetLastError()), Log::ERROR);
         network_blocker::block();
         return false;
     }
 
-    logger::info("kernel started");
+    Log::log_with_date_time("kernel started", Log::INFO);
     process_handle_.store(raw_handle);
     monitor_thread_ = jthread([this](stop_token st) { monitor_process(std::move(st)); });
     network_blocker::unblock();
@@ -122,14 +128,14 @@ void KernelService::monitor_process(stop_token st) {
 
     switch(wait_result) {
         case WAIT_OBJECT_0 + 0:
-            logger::error("kernel exited unexpectedly");
+            Log::log_with_date_time("kernel exited unexpectedly", Log::ERROR);
             if(main_window_)
                 PostMessageW(main_window_, WM_KERNEL_TERMINATED, 0, 0);
             break;
 
         case WAIT_OBJECT_0 + 1:
             stop_process_gracefully(proc);
-            logger::info("kernel stopped");
+            Log::log_with_date_time("kernel stopped", Log::INFO);
             break;
 
         default:

@@ -10,7 +10,7 @@ import components.Config;
 import components.I18n;
 import components.Service;
 import components.NetworkBlocker;
-import components.Logger;
+import components.Log;
 import common.Common;
 import common.Utils;
 
@@ -24,7 +24,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
         Config config;
         config.load(CONFIG_FILE);
         {
-            logger::set_level(config.log_level);
+            Log::level = config.log_level;
             I18n::instance().initialize(config.lang);
             network_blocker::initialize(config.block_network);
         }
@@ -36,7 +36,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
         } else
             return EXIT_FAILURE;
     } catch(std::exception& msg) {
-        logger::fatal(msg.what());
+        Log::log_with_date_time(msg.what(), Log::FATAL);
         MessageBoxW(nullptr, utf8_to_wide(msg.what()).c_str(), L"error", MB_ICONINFORMATION);
         return EXIT_FAILURE;
     }

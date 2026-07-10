@@ -9,7 +9,7 @@ module;
 
 export module components.Config;
 
-import components.Logger;
+import components.Log;
 
 using namespace std;
 
@@ -19,7 +19,7 @@ public:
     string lang;
     string ua;
     bool block_network;
-    logger::Level log_level = logger::ALL;
+    Log::Level log_level = Log::ALL;
     class Kernel {
     public:
         string path;
@@ -56,14 +56,14 @@ void Config::load(const string& filename) {
     populate(json);
 }
 
-// 解析日志等级名, 非法值抛出异常
-static logger::Level parse_log_level(const string& name) {
-    if(name == "ALL") return logger::ALL;
-    if(name == "INFO") return logger::INFO;
-    if(name == "WARN") return logger::WARN;
-    if(name == "ERROR") return logger::ERROR;
-    if(name == "FATAL") return logger::FATAL;
-    if(name == "OFF") return logger::OFF;
+// 解析日志等级名 (小写), 非法值抛出异常
+static Log::Level parse_log_level(const string& name) {
+    if(name == "all") return Log::ALL;
+    if(name == "info") return Log::INFO;
+    if(name == "warn") return Log::WARN;
+    if(name == "error") return Log::ERROR;
+    if(name == "fatal") return Log::FATAL;
+    if(name == "off") return Log::OFF;
     throw runtime_error(format("Field 'log_level' has invalid value: {}", name));
 }
 

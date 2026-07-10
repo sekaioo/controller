@@ -9,11 +9,16 @@ module;
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "oleaut32.lib")
 
+// windows.h 定义的 ERROR 宏与 Log::ERROR 冲突
+#ifdef ERROR
+#undef ERROR
+#endif
+
 export module components.NetworkBlocker;
 
 import components.Config;
 import components.I18n;
-import components.Logger;
+import components.Log;
 
 using namespace std;
 
@@ -147,14 +152,14 @@ export namespace network_blocker {
         lock_guard lock(block_mutex_);
         if(!enable_block_network_) return;
         if(add_rule())
-            logger::info("network blocked");
+            Log::log_with_date_time("network blocked", Log::INFO);
         else
-            logger::error("add firewall rule failed");
+            Log::log_with_date_time("add firewall rule failed", Log::ERROR);
     }
 
     void unblock() {
         lock_guard lock(block_mutex_);
         if(!remove_rule())
-            logger::error("remove firewall rule failed");
+            Log::log_with_date_time("remove firewall rule failed", Log::ERROR);
     }
 }

@@ -18,12 +18,17 @@ module;
 #include "constants.h"
 #include "resource.h"
 
+// windows.h 定义的 ERROR 宏与 Log::ERROR 冲突
+#ifdef ERROR
+#undef ERROR
+#endif
+
 export module components.Service;
 
 import components.Config;
 import components.I18n;
 import components.KernelService;
-import components.Logger;
+import components.Log;
 import components.NetworkBlocker;
 import components.TrayManager;
 import common.Utils;
@@ -311,7 +316,7 @@ void Service::on_update_profiles() const {
     thread([tasks = std::move(tasks), ua = config_.ua,
             state = update_state_, window = main_window_] {
         const auto report_error = [&](string msg) {
-            logger::error(format("update profile failed: {}", msg));
+            Log::log_with_date_time(format("update profile failed: {}", msg), Log::ERROR);
             {
                 lock_guard lock(state->mutex);
                 state->errors.push(std::move(msg));
