@@ -68,8 +68,10 @@ void I18n::initialize(string_view code) const {
 }
 
 string I18n::get(string_view key) const {
-    if(json_->HasMember(key.data()))
-        if(const auto& value = (*json_)[key.data()]; value.IsString())
+    // rapidjson 是 C 风格接口, 需要 \0 结尾, 在边界处构造 C 字符串
+    const string key_str(key);
+    if(json_->HasMember(key_str.c_str()))
+        if(const auto& value = (*json_)[key_str.c_str()]; value.IsString())
             return value.GetString();
 
     return format(missing_key_format_, key);

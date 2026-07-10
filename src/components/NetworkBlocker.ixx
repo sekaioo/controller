@@ -122,6 +122,11 @@ bool NetworkBlocker::add_rule() {
     hr = pNetFwPolicy2->get_Rules(pNetFwRules.release_and_get_address());
     if(FAILED(hr)) return false;
 
+    // 同名规则已存在时直接复用, 避免重复添加导致规则累积
+    hr = pNetFwRules->Item(_bstr_t(FIREWALL_RULE_NAME),
+                           pNetFwRule.release_and_get_address());
+    if(SUCCEEDED(hr)) return true;
+
     // 创建新规则实例
     hr = CoCreateInstance(
         __uuidof(NetFwRule), nullptr, CLSCTX_INPROC_SERVER, __uuidof(INetFwRule),
@@ -148,6 +153,7 @@ bool NetworkBlocker::remove_rule() {
     HRESULT hr = S_OK;
     ComPtr<INetFwPolicy2> pNetFwPolicy2;
     ComPtr<INetFwRules> pNetFwRules;
+    ComPtr<INetFwRule> pNetFwRule;
 
     // 创建防火墙策略实例
     hr = CoCreateInstance(
@@ -160,7 +166,12 @@ bool NetworkBlocker::remove_rule() {
     hr = pNetFwPolicy2->get_Rules(pNetFwRules.release_and_get_address());
     if(FAILED(hr)) return false;
 
-    // 移除规则
-    hr = pNetFwRules->Remove(_bstr_t(FIREWALL_RULE_NAME));
-    return SUCCEEDED(hr);
+    // 同名规则可能存在多条(历史版本残留), 循环删除直到不存在, 上限防止意外死循环
+    for(int i = 0; i < 16; ++i) {
+        hr = pNetFwRules->Item(_bstr_t(FIREWALL_RULE_NAME),
+                               pNetFwRule.release_and_get_address());
+        if(FAILED(hr)) break;
+        if(FAILED(pNetFwRules->Remove(_bstr_t(FIREWALL_RULE_NAME)))) return false;
+    }
+    return true;
 }

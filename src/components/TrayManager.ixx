@@ -54,6 +54,8 @@ bool TrayManager::register_tray() {
 }
 
 bool TrayManager::refresh_tray() {
+    // 图标已存在时 NIM_ADD 会失败, 先尝试修改, 失败(图标不存在)再添加
+    if(Shell_NotifyIconW(NIM_MODIFY, &tray_icon_)) return true;
     return Shell_NotifyIconW(NIM_ADD, &tray_icon_);
 }
 

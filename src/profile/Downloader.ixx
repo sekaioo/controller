@@ -21,10 +21,11 @@ import common.Common;
 using namespace std;
 namespace fs = std::filesystem;
 
-constexpr auto CURL_COMMAND = LR"(curl -fL -A "{}" -o "{}" "{}")";
+constexpr auto CURL_COMMAND = L"curl -fL -A {} -o {} {}";
 constexpr auto TEMP_FILE_NAME = L"controller_download_{}.tmp";
 
 // @formatter:off
+static wstring quote_argument(wstring_view arg);
 static fs::path make_temp_path();
 static optional<DWORD> wait_for_exit(HANDLE process, DWORD timeout_ms);
 static bool is_valid_json(const fs::path& path);
@@ -40,11 +41,11 @@ export bool download_profile(string_view target_url, string_view ua, const fs::p
     };
     ScopeGuard on_exit(temp_cleanup);
 
-    // 启动 curl 子进程
+    // 启动 curl 子进程, 参数按 Windows 命令行规则转义, 防止引号破坏命令
     wstring command = format(CURL_COMMAND,
-                             utf8_to_wide(std::string(ua)),
-                             temp_path.wstring(),
-                             utf8_to_wide(target_url.data())
+                             quote_argument(utf8_to_wide(ua)),
+                             quote_argument(temp_path.wstring()),
+                             quote_argument(utf8_to_wide(target_url))
     );
     HANDLE raw_handle = launch_hidden_process(command.c_str());
     if(!raw_handle) return false;
@@ -66,6 +67,29 @@ export bool download_profile(string_view target_url, string_view ua, const fs::p
     } catch(const fs::filesystem_error&) {
         return false;
     }
+}
+
+// 按 Windows 命令行解析规则 (CommandLineToArgvW) 为参数加引号并转义
+static wstring quote_argument(wstring_view arg) {
+    wstring result = L"\"";
+    size_t backslashes = 0;
+    for(const wchar_t c : arg) {
+        if(c == L'\\') {
+            ++backslashes;
+            continue;
+        }
+        if(c == L'"') {
+            // 引号前的反斜杠需要成对转义, 引号本身再加一个反斜杠
+            result.append(backslashes * 2 + 1, L'\\');
+        } else
+            result.append(backslashes, L'\\');
+        result += c;
+        backslashes = 0;
+    }
+    // 结尾的反斜杠需要成对转义, 避免吞掉收尾引号
+    result.append(backslashes * 2, L'\\');
+    result += L'"';
+    return result;
 }
 
 static fs::path make_temp_path() {

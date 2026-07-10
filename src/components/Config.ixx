@@ -76,11 +76,13 @@ void Config::populate(const rapidjson::Document& doc) {
 template<typename TypeChecker>
 static void check_field(const rapidjson::Value& object, string_view field, TypeChecker checker,
                         string_view error_prefix = "") {
-    if(!object.HasMember(field.data())) {
+    // rapidjson 是 C 风格接口, 需要 \0 结尾, 在边界处构造 C 字符串
+    const string field_str(field);
+    if(!object.HasMember(field_str.c_str())) {
         constexpr auto missing_key_format = "Missing required field: {}{}";
         throw runtime_error(format(missing_key_format, error_prefix, field));
     }
-    if(!checker(object[field.data()])) {
+    if(!checker(object[field_str.c_str()])) {
         constexpr auto key_incorrect_format = "Field '{}{}' has incorrect type";
         throw runtime_error(format(key_incorrect_format, error_prefix, field));
     }
