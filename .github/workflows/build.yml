@@ -10,6 +10,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}-${{ inputs.version }}
@@ -52,15 +55,18 @@ jobs:
       - name: Build
         run: cmake --build --preset ${{ matrix.config.preset }}
 
+      - name: Run tests
+        run: ctest --test-dir out/build/${{ matrix.config.preset }} --output-on-failure
+
       - name: Prepare release files
         if: github.event_name == 'workflow_dispatch'
         shell: powershell
         run: |
           $releaseDir = "release-temp/${{ matrix.config.artifact }}"
-          $exeFile = "out/build/${{ matrix.config.preset }}/Controller.exe"
+          $exeFile = "out/build/${{ matrix.config.preset }}/controller.exe"
           New-Item -ItemType Directory -Force -Path $releaseDir
           Copy-Item $exeFile -Destination $releaseDir
-          Write-Host "Packaged Executable: Controller.exe"
+          Write-Host "Packaged Executable: controller.exe"
 
       - name: Upload build artifacts
         if: github.event_name == 'workflow_dispatch'
