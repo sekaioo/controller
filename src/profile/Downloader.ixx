@@ -14,8 +14,8 @@ module;
 export module profile.Downloader;
 
 import components.Config;
+import components.Logger;
 import common.Common;
-import common.Logger;
 import common.Utils;
 
 using namespace std;

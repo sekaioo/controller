@@ -13,9 +13,9 @@ module;
 export module components.KernelService;
 
 import components.Config;
+import components.Logger;
 import components.NetworkBlocker;
 import common.Common;
-import common.Logger;
 import common.Utils;
 
 using namespace std;

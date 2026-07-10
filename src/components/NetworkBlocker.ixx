@@ -13,7 +13,7 @@ export module components.NetworkBlocker;
 
 import components.Config;
 import components.I18n;
-import common.Logger;
+import components.Logger;
 
 using namespace std;
 

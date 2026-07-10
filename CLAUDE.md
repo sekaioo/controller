@@ -93,9 +93,10 @@ A top-level `ScopeGuard` guarantees the firewall rule is removed on any exit pat
   `CreateProcessW` wrapper used for both kernel and curl), `get_executable_directory`.
 - `common.Common` — RAII guards: `MutexGuard` (single-instance), `HandleGuard`
   (owns a `HANDLE`), `ScopeGuard` (dismissable cleanup lambda).
-- `common.Logger` — `logger::info`/`logger::error` free functions appending to
-  `data/controller.log` (UTF-8, mutex-guarded, rotates to `.log.old` past
-  `LOG_MAX_SIZE`). Logging must never throw or affect program flow.
+- `components.Logger` — `logger::info/warn/error/fatal` free functions appending
+  to `data/controller.log` (UTF-8, mutex-guarded, rotates to `.log.old` past
+  `LOG_MAX_SIZE`). `logger::set_level(Level)` filters below-threshold messages
+  (`ALL`→`OFF`, default `ALL`). Logging must never throw or affect program flow.
 
 ## Conventions
 
