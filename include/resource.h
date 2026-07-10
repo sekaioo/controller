@@ -5,7 +5,6 @@
 #define WM_SHOW_MENU (WM_APP + 100)                // 显示托盘 ID
 #define WM_KERNEL_TERMINATED (WM_APP + 101)        // kernel 进程终止消息 ID
 #define WM_PROFILE_UPDATE_COMPLETE (WM_APP + 102)  // 更新结束 ID
-#define WM_PROFILE_UPDATE_ERROR (WM_APP + 103)     // 更新失败 ID
 
 // 菜单项 ID
 #define IDM_START_KERNEL (WM_APP + 1000)    // 启动 kernel ID

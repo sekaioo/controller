@@ -22,7 +22,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
     // 加载配置文件和语言
     try {
         Config config;
-        config.load(CONFIG_FILE);
+        config.load(exe_relative_path(CONFIG_FILE));
         {
             Log::level = config.log_level;
             I18n::instance().initialize(config.lang);

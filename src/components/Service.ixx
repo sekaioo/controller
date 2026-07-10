@@ -55,13 +55,14 @@ static string read_file_bytes(const std::filesystem::path& path) {
 
 // 启动时通过内容比对推断当前生效的订阅, 无法确定时返回 -1
 static int detect_current_profile(const Config& config, const vector<string>& names) {
-    const string kernel_config = read_file_bytes(config.kernel.config_path);
+    const string kernel_config = read_file_bytes(exe_relative_path(config.kernel.config_path));
     if(kernel_config.empty()) return -1;
 
     for(size_t i = 0; i < names.size(); ++i) {
         const auto it = config.profiles.find(names[i]);
         if(it == config.profiles.end()) continue;
-        if(read_file_bytes(format("{}{}", PROFILES_DIR, it->second.path)) == kernel_config)
+        const auto profile_path = exe_relative_path(format("{}{}", PROFILES_DIR, it->second.path));
+        if(read_file_bytes(profile_path) == kernel_config)
             return static_cast<int>(i);
     }
     return -1;
@@ -90,7 +91,7 @@ public:
 private:
     bool initialize();
     void handle_menu_command(int menuId) const;
-    string pop_error_message() const;
+    string pop_all_errors() const;
     void on_switch_profile(int profile_index) const;
     void on_update_profiles() const;
     void on_start_service() const;
@@ -208,18 +209,18 @@ LRESULT Service::handle_message(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
                             wtr("dialog.hint").c_str(), MB_ICONINFORMATION);
             break;
 
-        // 订阅更新完成
-        case WM_PROFILE_UPDATE_COMPLETE:
-            MessageBoxW(nullptr, wtr("dialog.update_profile_complete").c_str(),
-                        wtr("dialog.complete").c_str(), MB_ICONINFORMATION);
-            break;
-
-        // 订阅更新错误
-        case WM_PROFILE_UPDATE_ERROR: {
-            const wstring err_msg = utf8_to_wide(pop_error_message());
-            if(!err_msg.empty())
+        // 订阅更新完成, 一次性汇总结果: 全部成功报完成, 有失败列出失败项
+        case WM_PROFILE_UPDATE_COMPLETE: {
+            const string errors = pop_all_errors();
+            if(errors.empty())
+                MessageBoxW(nullptr, wtr("dialog.update_profile_complete").c_str(),
+                            wtr("dialog.complete").c_str(), MB_ICONINFORMATION);
+            else {
+                const wstring err_msg = format(L"{}\n{}", wtr("dialog.update_profile_failed"),
+                                               utf8_to_wide(errors));
                 MessageBoxW(nullptr, err_msg.c_str(),
                             wtr("dialog.error").c_str(), MB_ICONERROR);
+            }
             break;
         }
 
@@ -273,12 +274,15 @@ void Service::handle_menu_command(const int menuId) const {
     }
 }
 
-string Service::pop_error_message() const {
+string Service::pop_all_errors() const {
     lock_guard lock(update_state_->mutex);
-    if(update_state_->errors.empty()) return {};
-    string msg = move(update_state_->errors.front());
-    update_state_->errors.pop();
-    return msg;
+    string result;
+    while(!update_state_->errors.empty()) {
+        if(!result.empty()) result += '\n';
+        result += update_state_->errors.front();
+        update_state_->errors.pop();
+    }
+    return result;
 }
 
 void Service::on_switch_profile(const int profile_index) const {
@@ -315,13 +319,11 @@ void Service::on_update_profiles() const {
     // 启动一个后台线程来执行更新任务
     thread([tasks = std::move(tasks), ua = config_.ua,
             state = update_state_, window = main_window_] {
+        // 失败项只收集不弹窗, 全部结束后由 WM_PROFILE_UPDATE_COMPLETE 一次性汇总
         const auto report_error = [&](string msg) {
             Log::log_with_date_time(format("update profile failed: {}", msg), Log::ERROR);
-            {
-                lock_guard lock(state->mutex);
-                state->errors.push(std::move(msg));
-            }
-            PostMessageW(window, WM_PROFILE_UPDATE_ERROR, 0, 0);
+            lock_guard lock(state->mutex);
+            state->errors.push(std::move(msg));
         };
         for(const auto& [name, url, path] : tasks) {
             // 捕获所有异常: 线程中未捕获的异常会触发 std::terminate 使整个程序闪退

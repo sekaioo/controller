@@ -53,7 +53,7 @@ I18n& I18n::instance() {
 }
 
 void I18n::initialize(string_view code) {
-    const fs::path file_name = format(file_format, LANG_DIR, code);
+    const fs::path file_name = exe_relative_path(format(file_format, LANG_DIR, code));
 
     ifstream file(file_name);
     if(!file.is_open())

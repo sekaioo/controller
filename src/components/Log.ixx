@@ -11,6 +11,8 @@ module;
 
 export module components.Log;
 
+import common.Utils;
+
 using namespace std;
 namespace fs = std::filesystem;
 
@@ -36,10 +38,12 @@ private:
 
 // 超过阈值时轮转: 旧日志顶替 .old, 全程使用不抛异常的重载
 void Log::rotate_if_needed() {
+    const fs::path log_file = exe_relative_path(LOG_FILE);
     error_code ec;
-    if(fs::exists(LOG_FILE, ec) && fs::file_size(LOG_FILE, ec) > LOG_MAX_SIZE) {
-        fs::remove(LOG_FILE_OLD, ec);
-        fs::rename(LOG_FILE, LOG_FILE_OLD, ec);
+    if(fs::exists(log_file, ec) && fs::file_size(log_file, ec) > LOG_MAX_SIZE) {
+        const fs::path log_file_old = exe_relative_path(LOG_FILE_OLD);
+        fs::remove(log_file_old, ec);
+        fs::rename(log_file, log_file_old, ec);
     }
 }
 
@@ -52,7 +56,7 @@ void Log::log_with_date_time(string_view message, const Level message_level) noe
         lock_guard lock(log_mutex_);
         rotate_if_needed();
 
-        ofstream file(LOG_FILE, ios::app);
+        ofstream file(exe_relative_path(LOG_FILE), ios::app);
         if(!file.is_open()) return;
 
         const auto now = chrono::floor<chrono::seconds>(chrono::system_clock::now());

@@ -32,7 +32,7 @@ public:
         string url;
     };
     map<string, Profile> profiles;
-    void load(const string& filename);
+    void load(const filesystem::path& filename);
     void populate(const rapidjson::Document& doc);
 private:
     static void validate_config(const rapidjson::Document& doc);
@@ -41,7 +41,7 @@ private:
 };
 // @formatter:on
 
-void Config::load(const string& filename) {
+void Config::load(const filesystem::path& filename) {
     ifstream file(filename);
     if(!file.is_open())
         throw runtime_error("open config file failed");

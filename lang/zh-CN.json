@@ -11,6 +11,7 @@
   "dialog.start_kernel_failed": "启动内核失败",
   "dialog.stop_kernel_failed": "停止内核失败",
   "dialog.update_profile_complete": "订阅更新结束",
+  "dialog.update_profile_failed": "以下订阅更新失败:",
   "dialog.check_profile_list": "请检查订阅列表文件",
   "dialog.profile_path_not_in_list": "该订阅路径不在列表",
   "dialog.network_blocked": "网络访问已被阻断",

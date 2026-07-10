@@ -8,6 +8,7 @@ module;
 export module profile.Manager;
 
 import components.I18n;
+import common.Utils;
 import profile.Downloader;
 
 using namespace std;
@@ -19,8 +20,8 @@ export void switch_profile(string_view path, string_view kernel_config_path) {
         throw runtime_error(tr("dialog.profile_path_not_in_list"));
 
     try {
-        const fs::path src_path = format("{}{}", PROFILES_DIR, path);
-        const fs::path dst_path = kernel_config_path;
+        const fs::path src_path = exe_relative_path(format("{}{}", PROFILES_DIR, path));
+        const fs::path dst_path = exe_relative_path(kernel_config_path);
 
         // 复制文件
         copy_file(src_path, dst_path, fs::copy_options::overwrite_existing);
@@ -39,6 +40,6 @@ export bool update_profile(string_view url, string_view ua, string_view path) {
         throw runtime_error(tr("dialog.profile_path_not_in_list"));
     }
 
-    const fs::path dst_path = format("{}{}", PROFILES_DIR, path);
+    const fs::path dst_path = exe_relative_path(format("{}{}", PROFILES_DIR, path));
     return download_profile(url, ua, dst_path);
 }

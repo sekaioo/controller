@@ -11,6 +11,7 @@
   "dialog.start_kernel_failed": "Failed to start kernel.",
   "dialog.stop_kernel_failed": "Failed to stop kernel",
   "dialog.update_profile_complete": "Profile update complete",
+  "dialog.update_profile_failed": "The following profiles failed to update:",
   "dialog.check_profile_list": "Please check the profile list file",
   "dialog.profile_path_not_in_list": "The profile path is not in the list",
   "dialog.network_blocked": "Network access has been blocked",

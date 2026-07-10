@@ -58,7 +58,15 @@ export HANDLE launch_hidden_process(
 }
 
 // 取程序路径
-export wstring get_executable_directory() {
+export wstring get_executable_directory();
+
+// 基于程序目录构造绝对路径 (relative 为 UTF-8), 避免依赖当前工作目录
+export std::filesystem::path exe_relative_path(string_view relative) {
+    static const std::filesystem::path base = get_executable_directory();
+    return base / utf8_to_wide(relative);
+}
+
+wstring get_executable_directory() {
     vector<wchar_t> buffer(MAX_PATH);
     DWORD size = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
 
