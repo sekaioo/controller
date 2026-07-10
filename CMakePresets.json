@@ -16,8 +16,7 @@
         "CMAKE_C_COMPILER": "cl.exe",
         "CMAKE_CXX_COMPILER": "cl.exe",
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "CMAKE_EXE_LINKER_FLAGS": "/MANIFESTUAC:\"level='requireAdministrator' uiAccess='false'\"",
-        "CMAKE_CXX_FLAGS": "/utf-8 /EHsc /W4"
+        "CMAKE_CXX_FLAGS": "/utf-8 /EHsc /W4 /WX"
       }
     },
     {

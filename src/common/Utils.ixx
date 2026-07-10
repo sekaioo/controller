@@ -57,6 +57,29 @@ export HANDLE launch_hidden_process(
     return pi.hProcess;
 }
 
+// 按 Windows 命令行解析规则 (CommandLineToArgvW) 为参数加引号并转义
+export wstring quote_argument(std::wstring_view arg) {
+    wstring result = L"\"";
+    size_t backslashes = 0;
+    for(const wchar_t c : arg) {
+        if(c == L'\\') {
+            ++backslashes;
+            continue;
+        }
+        if(c == L'"') {
+            // 引号前的反斜杠需要成对转义, 引号本身再加一个反斜杠
+            result.append(backslashes * 2 + 1, L'\\');
+        } else
+            result.append(backslashes, L'\\');
+        result += c;
+        backslashes = 0;
+    }
+    // 结尾的反斜杠需要成对转义, 避免吞掉收尾引号
+    result.append(backslashes * 2, L'\\');
+    result += L'"';
+    return result;
+}
+
 // 取程序路径
 export wstring get_executable_directory();
 
