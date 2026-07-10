@@ -16,7 +16,7 @@ import profile.Manager;
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
     ScopeGuard unblock_on_exit([] {
-        NetworkBlocker::instance().unblock_network();
+        network_blocker::unblock();
     });
 
     // 加载配置文件和语言
@@ -25,7 +25,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
         config.load(CONFIG_FILE);
         {
             I18n::instance().initialize(config.lang);
-            NetworkBlocker::initialize(config.block_network);
+            network_blocker::initialize(config.block_network);
             ProfileManager::initialize(config.profiles);
         }
         // 检查是否已经运行了一个实例

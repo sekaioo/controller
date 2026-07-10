@@ -68,13 +68,13 @@ bool KernelService::start(wstring&& kernel_path, wstring&& kernel_command) {
     );
 
     if(!raw_handle) {
-        NetworkBlocker::instance().block_network();
+        network_blocker::block();
         return false;
     }
 
     process_handle_.store(raw_handle);
     monitor_thread_ = jthread([this](stop_token st) { monitor_process(std::move(st)); });
-    NetworkBlocker::instance().unblock_network();
+    network_blocker::unblock();
     return true;
 }
 
@@ -131,7 +131,7 @@ void KernelService::monitor_process(stop_token st) {
             break;
     }
 
-    NetworkBlocker::instance().block_network();
+    network_blocker::block();
     if(HANDLE h = process_handle_.exchange(nullptr))
         CloseHandle(h);
 }

@@ -3,7 +3,6 @@ module;
 #include <netfw.h>
 
 #include <mutex>
-#include <sstream>
 
 #include "constants.h"
 
@@ -59,50 +58,11 @@ private:
 };
 // @formatter:on
 
-// @formatter:off
-export class NetworkBlocker {
-public:
-    static NetworkBlocker& instance();
-    static void initialize(bool enable_block_network) ;
-    void block_network() const;
-    void unblock_network() const;
-    NetworkBlocker(const NetworkBlocker&) = delete;
-    NetworkBlocker& operator=(const NetworkBlocker&) = delete;
-    NetworkBlocker(NetworkBlocker&&) = delete;
-    NetworkBlocker& operator=(NetworkBlocker&&) = delete;
-private:
-    NetworkBlocker() {
-        remove_rule();
-    }
-    ~NetworkBlocker() { remove_rule(); }
-    static bool add_rule();
-    static bool remove_rule();
-    inline static bool enable_block_network_;
-    mutable mutex mutex_;
-};
-// @formatter:on
+// 模块内部状态: 配置开关与串行化多线程调用的互斥锁
+static bool enable_block_network_ = false;
+static mutex block_mutex_;
 
-NetworkBlocker& NetworkBlocker::instance() {
-    static NetworkBlocker instance;
-    return instance;
-}
-
-void NetworkBlocker::initialize(bool enable_block_network) {
-    enable_block_network_ = enable_block_network;
-}
-
-void NetworkBlocker::block_network() const {
-    lock_guard lock(mutex_);
-    if(!enable_block_network_) return;
-    add_rule();
-}
-
-void NetworkBlocker::unblock_network() const {
-    lock_guard lock(mutex_);
-    remove_rule();
-}
-
-bool NetworkBlocker::add_rule() {
+static bool add_rule() {
     const ComInit com_init;
     if(!com_init.is_ok()) return false;
 
@@ -146,7 +106,7 @@ bool NetworkBlocker::add_rule() {
     return SUCCEEDED(hr);
 }
 
-bool NetworkBlocker::remove_rule() {
+static bool remove_rule() {
     const ComInit com_init;
     if(!com_init.is_ok()) return false;
 
@@ -174,4 +134,22 @@ bool NetworkBlocker::remove_rule() {
         if(FAILED(pNetFwRules->Remove(_bstr_t(FIREWALL_RULE_NAME)))) return false;
     }
     return true;
+}
+
+export namespace network_blocker {
+    // 记录配置开关, block() 仅在开关打开时生效
+    void initialize(const bool enable_block_network) {
+        enable_block_network_ = enable_block_network;
+    }
+
+    void block() {
+        lock_guard lock(block_mutex_);
+        if(!enable_block_network_) return;
+        add_rule();
+    }
+
+    void unblock() {
+        lock_guard lock(block_mutex_);
+        remove_rule();
+    }
 }

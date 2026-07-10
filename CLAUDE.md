@@ -68,10 +68,11 @@ A top-level `ScopeGuard` guarantees the firewall rule is removed on any exit pat
   `WM_KERNEL_TERMINATED`; on requested stop it sends a graceful `CTRL_C_EVENT`
   (via `AttachConsole`) with an 8s timeout before `TerminateProcess`. Blocks the
   network whenever the process is not running (fail-closed).
-- `components.NetworkBlocker` — singleton wrapping Windows Firewall COM
+- `components.NetworkBlocker` — free functions in the `network_blocker`
+  namespace (`initialize`/`block`/`unblock`) wrapping Windows Firewall COM
   (`INetFwPolicy2`) to add/remove an outbound-block rule named `NetworkBlock`.
-  Gated by the `block_network` config flag; mutex-guarded. Uses local RAII
-  helpers `ComInit` / `ComPtr`.
+  `block()` is gated by the `block_network` config flag; mutex-guarded.
+  Uses module-local RAII helpers `ComInit` / `ComPtr`.
 - `components.TrayManager` — the `NOTIFYICONDATAW` tray icon and the popup menu,
   built dynamically from `ProfileManager::profiles_names`.
 - `components.Config` — parses/validates `config.json` with rapidjson; the
