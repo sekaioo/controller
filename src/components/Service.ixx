@@ -2,7 +2,10 @@ module;
 #include <windows.h>
 
 #include <atomic>
+#include <filesystem>
 #include <format>
+#include <fstream>
+#include <iterator>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -38,6 +41,27 @@ static vector<string> profile_names_from(const Config& config) {
     return names;
 }
 
+// 读取整个文件内容, 打不开返回空
+static string read_file_bytes(const std::filesystem::path& path) {
+    ifstream file(path, ios::binary);
+    if(!file.is_open()) return {};
+    return {istreambuf_iterator(file), istreambuf_iterator<char>()};
+}
+
+// 启动时通过内容比对推断当前生效的订阅, 无法确定时返回 -1
+static int detect_current_profile(const Config& config, const vector<string>& names) {
+    const string kernel_config = read_file_bytes(config.kernel.config_path);
+    if(kernel_config.empty()) return -1;
+
+    for(size_t i = 0; i < names.size(); ++i) {
+        const auto it = config.profiles.find(names[i]);
+        if(it == config.profiles.end()) continue;
+        if(read_file_bytes(format("{}{}", PROFILES_DIR, it->second.path)) == kernel_config)
+            return static_cast<int>(i);
+    }
+    return -1;
+}
+
 // @formatter:off
 export class Service {
 public:
@@ -46,6 +70,7 @@ public:
         main_window_(nullptr),
         instance_handle_(instance_handle),
         profile_names_(profile_names_from(config)),
+        current_profile_index_(detect_current_profile(config, profile_names_)),
         service_(make_shared<KernelService>()),
         tray_manager_(make_unique<TrayManager>(service_, profile_names_)),
         wm_taskbarcreated_(RegisterWindowMessageW(L"TaskbarCreated")) {
@@ -79,6 +104,7 @@ private:
     HWND main_window_;
     HINSTANCE instance_handle_;
     vector<string> profile_names_;
+    mutable int current_profile_index_;
     shared_ptr<KernelService> service_;
     unique_ptr<TrayManager> tray_manager_;
     shared_ptr<UpdateState> update_state_ = make_shared<UpdateState>();
@@ -156,7 +182,8 @@ LRESULT Service::handle_message(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         // 托盘图标消息
         case WM_SHOW_MENU:
             if(lParam == WM_LBUTTONUP || lParam == WM_RBUTTONUP)
-                tray_manager_->show_menu();
+                tray_manager_->show_menu(current_profile_index_,
+                                         update_state_->updating.load());
             break;
 
         // 处理菜单命令
@@ -257,6 +284,7 @@ void Service::on_switch_profile(const int profile_index) const {
         try {
             const string& profile_name = profile_names_[profile_index];
             switch_profile(config_.profiles.at(profile_name).path, config_.kernel.config_path);
+            current_profile_index_ = profile_index;
         } catch(const runtime_error& e) {
             const wstring msg = utf8_to_wide(e.what());
             MessageBoxW(nullptr, msg.c_str(), wtr("dialog.path_error").c_str(),MB_ICONERROR);

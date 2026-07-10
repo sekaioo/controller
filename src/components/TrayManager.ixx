@@ -30,7 +30,7 @@ public:
 
     bool register_tray();
     bool refresh_tray();
-    void show_menu() const;
+    void show_menu(int checked_profile_index, bool updating) const;
     void cleanup();
 private:
     NOTIFYICONDATAW tray_icon_ = {sizeof(NOTIFYICONDATAW)};
@@ -63,7 +63,7 @@ bool TrayManager::refresh_tray() {
     return Shell_NotifyIconW(NIM_ADD, &tray_icon_);
 }
 
-void TrayManager::show_menu() const {
+void TrayManager::show_menu(const int checked_profile_index, const bool updating) const {
     POINT pt;
     GetCursorPos(&pt);
 
@@ -71,13 +71,16 @@ void TrayManager::show_menu() const {
     HMENU hMenu = CreatePopupMenu();
     HMENU hSubMenu = CreatePopupMenu();
 
-    // 填充订阅子菜单, 数量上限为菜单 ID 区间大小
-    for(size_t i = 0; i < profile_names_.size() && i < IDM_PROFILE_MAX - IDM_PROFILE_BASE; ++i)
-        AppendMenuW(hSubMenu, MF_STRING, IDM_PROFILE_BASE + i, profile_names_[i].c_str());
+    // 填充订阅子菜单, 勾选当前生效的订阅, 数量上限为菜单 ID 区间大小
+    for(size_t i = 0; i < profile_names_.size() && i < IDM_PROFILE_MAX - IDM_PROFILE_BASE; ++i) {
+        const UINT checked = static_cast<int>(i) == checked_profile_index ? MF_CHECKED : 0u;
+        AppendMenuW(hSubMenu, MF_STRING | checked, IDM_PROFILE_BASE + i, profile_names_[i].c_str());
+    }
 
-    // 订阅相关
+    // 订阅相关, 更新进行中时灰化更新项防止误解为无响应
     AppendMenuW(hMenu, MF_POPUP, reinterpret_cast<UINT_PTR>(hSubMenu), wtr("tray.switch_profile").c_str());
-    AppendMenuW(hMenu, MF_STRING, IDM_UPDATE_PROFILE, wtr("tray.update_profile").c_str());
+    AppendMenuW(hMenu, MF_STRING | (updating ? MF_GRAYED : 0u), IDM_UPDATE_PROFILE,
+                wtr("tray.update_profile").c_str());
     AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
 
     // 启动 / 停止按钮状态
