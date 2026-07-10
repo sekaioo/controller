@@ -14,15 +14,18 @@ export module components.TrayManager;
 import components.KernelService;
 import components.I18n;
 import common.Utils;
-import profile.Manager;
 
 using namespace std;
 
 // @formatter:off
 export class TrayManager {
 public:
-    explicit TrayManager(shared_ptr<KernelService> service) :
-        service_(move(service)) {}
+    TrayManager(shared_ptr<KernelService> service, const vector<string>& profile_names) :
+        service_(move(service)) {
+        // 订阅名只需转换一次宽字符, 供每次构建菜单使用
+        for(const auto& name : profile_names)
+            profile_names_.push_back(utf8_to_wide(name));
+    }
     bool initialize(HWND main_window, HINSTANCE instance_handle);
 
     bool register_tray();
@@ -34,6 +37,7 @@ private:
     HWND main_window_ = nullptr;
     HINSTANCE instance_handle_ = nullptr;
     shared_ptr<KernelService> service_ = nullptr;
+    vector<wstring> profile_names_;
 };
 // @formatter:on
 
@@ -68,11 +72,8 @@ void TrayManager::show_menu() const {
     HMENU hSubMenu = CreatePopupMenu();
 
     // 填充订阅子菜单, 数量上限为菜单 ID 区间大小
-    vector<string> names = ProfileManager::profiles_names;
-    for(size_t i = 0; i < names.size() && i < IDM_PROFILE_MAX - IDM_PROFILE_BASE; ++i) {
-        wstring name = utf8_to_wide(names[i]);
-        AppendMenuW(hSubMenu, MF_STRING, IDM_PROFILE_BASE + i, name.c_str());
-    }
+    for(size_t i = 0; i < profile_names_.size() && i < IDM_PROFILE_MAX - IDM_PROFILE_BASE; ++i)
+        AppendMenuW(hSubMenu, MF_STRING, IDM_PROFILE_BASE + i, profile_names_[i].c_str());
 
     // 订阅相关
     AppendMenuW(hMenu, MF_POPUP, reinterpret_cast<UINT_PTR>(hSubMenu), wtr("tray.switch_profile").c_str());

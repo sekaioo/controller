@@ -12,7 +12,6 @@ import components.Service;
 import components.NetworkBlocker;
 import common.Common;
 import common.Utils;
-import profile.Manager;
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
     ScopeGuard unblock_on_exit([] {
@@ -26,7 +25,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
         {
             I18n::instance().initialize(config.lang);
             network_blocker::initialize(config.block_network);
-            ProfileManager::initialize(config.profiles);
         }
         // 检查是否已经运行了一个实例
         const MutexGuard mutexGuard(PROGRAM_MUTEX);

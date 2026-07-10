@@ -52,9 +52,9 @@ non-module headers included via the global-module fragment (`module;` block):
 `constants.h` (paths, mutex/class/rule names) and `resource.h` (Win32 message and
 menu IDs).
 
-Startup flow (`src/main.cpp`): load `Config` → initialize the `I18n`,
-`NetworkBlocker`, and `ProfileManager` singletons/statics from it → acquire the
-single-instance named mutex (`MutexGuard`) → construct and `run()` a `Service`.
+Startup flow (`src/main.cpp`): load `Config` → initialize `I18n` and
+`network_blocker` from it → acquire the single-instance named mutex
+(`MutexGuard`) → construct and `run()` a `Service`.
 A top-level `ScopeGuard` guarantees the firewall rule is removed on any exit path.
 
 **Module map (`export module` name → file):**
@@ -74,17 +74,18 @@ A top-level `ScopeGuard` guarantees the firewall rule is removed on any exit pat
   `block()` is gated by the `block_network` config flag; mutex-guarded.
   Uses module-local RAII helpers `ComInit` / `ComPtr`.
 - `components.TrayManager` — the `NOTIFYICONDATAW` tray icon and the popup menu,
-  built dynamically from `ProfileManager::profiles_names`.
+  built dynamically from the profile names passed in by `Service`.
 - `components.Config` — parses/validates `config.json` with rapidjson; the
   validation helpers (`check_field`, type-predicate lambdas) throw
   `std::runtime_error` with a field path on any missing/mistyped field.
 - `components.I18n` — singleton loading `lang/<code>.json`; use the free
   functions `tr(key)` (UTF-8 `string`) and `wtr(key)` (`wstring`) for all
   user-facing text. Missing keys return `"MISSING KEY: <key>"` rather than throw.
-- `profile.Manager` (`ProfileManager`) — static class. `switch_profile` copies a
-  file from `data/profiles/` over the kernel's config path; `update_profile`
-  delegates to the downloader. Profile names are cached in the static
-  `profiles_names` (menu order).
+- `profile.Manager` — free functions. `switch_profile` copies a file from
+  `data/profiles/` over the kernel's config path; `update_profile` delegates to
+  the downloader. Profile names/menu order derive from `Config::profiles` (a
+  sorted `std::map`); `Service` caches them in `profile_names_` and hands them
+  to `TrayManager`.
 - `profile.Downloader` — `download_profile` shells out to `curl` (hidden
   process, 8s timeout) into a temp file, validates it parses as JSON when the
   target is `.json`, then copies into place.

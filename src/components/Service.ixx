@@ -6,6 +6,7 @@ module;
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <ranges>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -27,6 +28,15 @@ import profile.Downloader;
 
 using namespace std;
 
+// 订阅名列表按 config.profiles 的 key 顺序生成, 即菜单顺序
+static vector<string> profile_names_from(const Config& config) {
+    vector<string> names;
+    names.reserve(config.profiles.size());
+    for(const auto& name : config.profiles | views::keys)
+        names.push_back(name);
+    return names;
+}
+
 // @formatter:off
 export class Service {
 public:
@@ -34,8 +44,9 @@ public:
         config_ (config),
         main_window_(nullptr),
         instance_handle_(instance_handle),
+        profile_names_(profile_names_from(config)),
         service_(make_shared<KernelService>()),
-        tray_manager_(make_unique<TrayManager>(service_)),
+        tray_manager_(make_unique<TrayManager>(service_, profile_names_)),
         wm_taskbarcreated_(RegisterWindowMessageW(L"TaskbarCreated")) {
         if(!initialize())
             throw runtime_error("Service initialization failed");
@@ -66,6 +77,7 @@ private:
     Config& config_;
     HWND main_window_;
     HINSTANCE instance_handle_;
+    vector<string> profile_names_;
     shared_ptr<KernelService> service_;
     unique_ptr<TrayManager> tray_manager_;
     shared_ptr<UpdateState> update_state_ = make_shared<UpdateState>();
@@ -237,15 +249,13 @@ string Service::pop_error_message() const {
 }
 
 void Service::on_switch_profile(const int profile_index) const {
-    if(profile_index >= 0 && static_cast<size_t>(profile_index) < ProfileManager::profiles_names.size()) {
+    if(profile_index >= 0 && static_cast<size_t>(profile_index) < profile_names_.size()) {
         const bool is_running = service_->is_running();
 
         if(is_running) on_stop_service();
         try {
-            string profile_name = ProfileManager::get_profile_name(profile_index);
-            string path = config_.profiles[profile_name].path;
-            string kernel_config_path = config_.kernel.config_path;
-            ProfileManager::switch_profile(path, kernel_config_path);
+            const string& profile_name = profile_names_[profile_index];
+            switch_profile(config_.profiles.at(profile_name).path, config_.kernel.config_path);
         } catch(const runtime_error& e) {
             const wstring msg = utf8_to_wide(e.what());
             MessageBoxW(nullptr, msg.c_str(), wtr("dialog.path_error").c_str(),MB_ICONERROR);
@@ -264,9 +274,9 @@ void Service::on_update_profiles() const {
         string name, url, path;
     };
     vector<Task> tasks;
-    for(const auto& name : ProfileManager::profiles_names)
-        if(const auto it = config_.profiles.find(name); it != config_.profiles.end())
-            tasks.push_back({name, it->second.url, it->second.path});
+    tasks.reserve(config_.profiles.size());
+    for(const auto& [name, profile] : config_.profiles)
+        tasks.push_back({name, profile.url, profile.path});
 
     // 启动一个后台线程来执行更新任务
     thread([tasks = std::move(tasks), ua = config_.ua,
@@ -281,7 +291,7 @@ void Service::on_update_profiles() const {
         for(const auto& [name, url, path] : tasks) {
             // 捕获所有异常: 线程中未捕获的异常会触发 std::terminate 使整个程序闪退
             try {
-                if(!ProfileManager::update_profile(url, ua, path))
+                if(!update_profile(url, ua, path))
                     report_error(name);
             } catch(const exception& e) {
                 report_error(format("{}: {}", name, e.what()));
