@@ -14,8 +14,9 @@ export module components.KernelService;
 
 import components.Config;
 import components.NetworkBlocker;
-import common.Utils;
 import common.Common;
+import common.Logger;
+import common.Utils;
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -68,10 +69,12 @@ bool KernelService::start(wstring&& kernel_path, wstring&& kernel_command) {
     );
 
     if(!raw_handle) {
+        logger::error(format("launch kernel failed, GetLastError={}", GetLastError()));
         network_blocker::block();
         return false;
     }
 
+    logger::info("kernel started");
     process_handle_.store(raw_handle);
     monitor_thread_ = jthread([this](stop_token st) { monitor_process(std::move(st)); });
     network_blocker::unblock();
@@ -119,12 +122,14 @@ void KernelService::monitor_process(stop_token st) {
 
     switch(wait_result) {
         case WAIT_OBJECT_0 + 0:
+            logger::error("kernel exited unexpectedly");
             if(main_window_)
                 PostMessageW(main_window_, WM_KERNEL_TERMINATED, 0, 0);
             break;
 
         case WAIT_OBJECT_0 + 1:
             stop_process_gracefully(proc);
+            logger::info("kernel stopped");
             break;
 
         default:

@@ -11,6 +11,7 @@ import components.I18n;
 import components.Service;
 import components.NetworkBlocker;
 import common.Common;
+import common.Logger;
 import common.Utils;
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
@@ -34,6 +35,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
         } else
             return EXIT_FAILURE;
     } catch(std::exception& msg) {
+        logger::error(std::string("fatal: ") + msg.what());
         MessageBoxW(nullptr, utf8_to_wide(msg.what()).c_str(), L"error", MB_ICONINFORMATION);
         return EXIT_FAILURE;
     }

@@ -6,6 +6,7 @@ module;
 
 #include <chrono>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <string>
 #include <system_error>
@@ -13,8 +14,9 @@ module;
 export module profile.Downloader;
 
 import components.Config;
-import common.Utils;
 import common.Common;
+import common.Logger;
+import common.Utils;
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -46,23 +48,37 @@ export bool download_profile(string_view target_url, string_view ua, const fs::p
                              quote_argument(utf8_to_wide(target_url))
     );
     HANDLE raw_handle = launch_hidden_process(command.c_str());
-    if(!raw_handle) return false;
+    if(!raw_handle) {
+        logger::error(format("launch curl failed: {}", target_url));
+        return false;
+    }
     HandleGuard process{raw_handle};
 
     // 等待最多 8 秒
     const auto exit_code = wait_for_exit(process.h, 8000);
-    if(!exit_code || *exit_code != 0) return false;
+    if(!exit_code) {
+        logger::error(format("download timed out: {}", target_url));
+        return false;
+    }
+    if(*exit_code != 0) {
+        logger::error(format("curl exited with code {}: {}", *exit_code, target_url));
+        return false;
+    }
 
     // 校验 JSON
-    if(target_path.extension() == ".json" && !is_valid_json(temp_path))
+    if(target_path.extension() == ".json" && !is_valid_json(temp_path)) {
+        logger::error(format("downloaded profile is not valid JSON: {}", target_url));
         return false;
+    }
 
     // 移动到目标位置
     try {
         fs::copy_file(temp_path, target_path, fs::copy_options::overwrite_existing);
         on_exit.dismiss();
+        logger::info(format("profile updated: {}", target_path.string()));
         return true;
-    } catch(const fs::filesystem_error&) {
+    } catch(const fs::filesystem_error& e) {
+        logger::error(format("copy profile to target failed: {}", e.what()));
         return false;
     }
 }

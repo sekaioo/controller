@@ -3,6 +3,9 @@
 constexpr auto LANG_DIR     = "lang/";                 // 订阅文件目录
 constexpr auto PROFILES_DIR = "data/profiles/";        // 订阅目录
 constexpr auto CONFIG_FILE  = "data/config.json";      // 配置文件
+constexpr auto LOG_FILE     = "data/controller.log";   // 日志文件
+constexpr auto LOG_FILE_OLD = "data/controller.log.old";  // 轮转后的旧日志
+constexpr auto LOG_MAX_SIZE = 512 * 1024;              // 日志轮转阈值 (字节)
 
 constexpr auto PROGRAM_MUTEX      = L"ControllerMutex";       // 程序互斥体
 constexpr auto WINDOWS_CLASS_NAME = L"ControllerClass";       // 窗口类名
