@@ -10,6 +10,7 @@ module;
 #include <functional>
 #include <mutex>
 #include <string>
+#include <system_error>
 
 export module profile.Downloader;
 
@@ -32,8 +33,11 @@ static bool is_valid_json(const fs::path& path);
 export bool download_profile(string_view target_url, string_view ua, const fs::path& target_path) {
     const fs::path temp_path = make_temp_path();
 
-    // 清理临时文件
-    const auto temp_cleanup = [&] { fs::remove(temp_path); };
+    // 清理临时文件, 必须用不抛异常的重载: ScopeGuard 析构中抛异常会直接终止整个程序
+    const auto temp_cleanup = [&]() noexcept {
+        error_code ec;
+        fs::remove(temp_path, ec);
+    };
     ScopeGuard on_exit(temp_cleanup);
 
     // 启动 curl 子进程
@@ -73,7 +77,9 @@ static fs::path make_temp_path() {
 
 static optional<DWORD> wait_for_exit(HANDLE process, DWORD timeout_ms) {
     if(WaitForSingleObject(process, timeout_ms) == WAIT_TIMEOUT) {
+        // TerminateProcess 是异步的, 等进程真正退出释放文件句柄后才能删除临时文件
         TerminateProcess(process, 1);
+        WaitForSingleObject(process, 2000);
         return std::nullopt;
     }
     DWORD exit_code{};

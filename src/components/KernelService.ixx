@@ -31,13 +31,30 @@ public:
     HANDLE get_process_handle() const { return process_handle_.load(); }
     void register_observer(HWND main_window) { main_window_ = main_window; }
 private:
+    static HANDLE create_kill_on_close_job();
     void monitor_process(stop_token st);
 
     atomic<HANDLE> process_handle_ = nullptr;
     jthread monitor_thread_;
     HWND main_window_ = nullptr;
+    HandleGuard job_{create_kill_on_close_job()};
 };
 // @formatter:on
+
+// 创建"句柄关闭即终止所有关联进程"的作业对象。内核进程加入后,
+// 本程序无论以何种方式退出(正常退出、崩溃、被强杀), 系统关闭该句柄时都会终止内核
+HANDLE KernelService::create_kill_on_close_job() {
+    HANDLE job = CreateJobObjectW(nullptr, nullptr);
+    if(!job) return nullptr;
+
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION info{};
+    info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+    if(!SetInformationJobObject(job, JobObjectExtendedLimitInformation, &info, sizeof(info))) {
+        CloseHandle(job);
+        return nullptr;
+    }
+    return job;
+}
 
 bool KernelService::start(wstring&& kernel_path, wstring&& kernel_command) {
     if(is_running()) return true;
@@ -47,7 +64,7 @@ bool KernelService::start(wstring&& kernel_path, wstring&& kernel_command) {
     const wstring service_dir = fs::path(full_kernel_path).parent_path().wstring();
 
     HANDLE raw_handle = launch_hidden_process(
-        kernel_command.c_str(), full_kernel_path.c_str(), service_dir.c_str()
+        kernel_command.c_str(), full_kernel_path.c_str(), service_dir.c_str(), job_.h
     );
 
     if(!raw_handle) {

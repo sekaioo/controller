@@ -27,17 +27,30 @@ export wstring utf8_to_wide(string_view utf8_str) {
 export HANDLE launch_hidden_process(
     const wchar_t* command,
     const wchar_t* application = nullptr,  // lpApplicationName
-    const wchar_t* working_dir = nullptr)  // lpCurrentDirectory
+    const wchar_t* working_dir = nullptr,  // lpCurrentDirectory
+    HANDLE job = nullptr)                  // 非空时进程在开始运行前被加入该作业对象
 {
     STARTUPINFOW si = {sizeof(si)};
     si.dwFlags = STARTF_USESHOWWINDOW;
     si.wShowWindow = SW_HIDE;
     PROCESS_INFORMATION pi = {};
 
-    constexpr DWORD flags = CREATE_NEW_CONSOLE | CREATE_UNICODE_ENVIRONMENT;
+    // 需要加入作业对象时先挂起创建, 避免进程在加入前逃逸
+    DWORD flags = CREATE_NEW_CONSOLE | CREATE_UNICODE_ENVIRONMENT;
+    if(job) flags |= CREATE_SUSPENDED;
     if(!CreateProcessW(application, const_cast<LPWSTR>(command), nullptr, nullptr, FALSE,
                        flags, nullptr, working_dir, &si, &pi))
         return nullptr;
+
+    if(job) {
+        if(!AssignProcessToJobObject(job, pi.hProcess)) {
+            TerminateProcess(pi.hProcess, 1);
+            CloseHandle(pi.hThread);
+            CloseHandle(pi.hProcess);
+            return nullptr;
+        }
+        ResumeThread(pi.hThread);
+    }
 
     CloseHandle(pi.hThread);
     return pi.hProcess;

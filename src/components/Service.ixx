@@ -1,6 +1,7 @@
 module;
 #include <windows.h>
 
+#include <atomic>
 #include <format>
 #include <memory>
 #include <mutex>
@@ -54,13 +55,20 @@ private:
     void on_stop_service() const;
     void on_exit() const;
 
+    // 订阅更新的共享状态: 后台线程按值持有 shared_ptr,
+    // 即使 Service 已析构线程也不会访问悬垂内存
+    struct UpdateState {
+        mutex mutex;
+        queue<string> errors;
+        atomic<bool> updating = false;
+    };
+
     Config& config_;
     HWND main_window_;
     HINSTANCE instance_handle_;
     shared_ptr<KernelService> service_;
     unique_ptr<TrayManager> tray_manager_;
-    mutable queue<string> error_queue_;
-    mutable mutex error_queue_mutex_;
+    shared_ptr<UpdateState> update_state_ = make_shared<UpdateState>();
     UINT wm_taskbarcreated_;
 };
 // @formatter:on
@@ -219,10 +227,10 @@ void Service::handle_menu_command(const int menuId) const {
 }
 
 string Service::pop_error_message() const {
-    lock_guard lock(error_queue_mutex_);
-    if(error_queue_.empty()) return {};
-    string msg = move(error_queue_.front());
-    error_queue_.pop();
+    lock_guard lock(update_state_->mutex);
+    if(update_state_->errors.empty()) return {};
+    string msg = move(update_state_->errors.front());
+    update_state_->errors.pop();
     return msg;
 }
 
@@ -246,22 +254,41 @@ void Service::on_switch_profile(const int profile_index) const {
 }
 
 void Service::on_update_profiles() const {
+    // 已有更新任务在运行时忽略, 防止并发下载同一文件
+    if(update_state_->updating.exchange(true)) return;
+
+    // 在主线程先把所需配置拷贝成快照, 后台线程不再访问 this / config_
+    struct Task {
+        string name, url, path;
+    };
+    vector<Task> tasks;
+    for(const auto& name : ProfileManager::profiles_names)
+        if(const auto it = config_.profiles.find(name); it != config_.profiles.end())
+            tasks.push_back({name, it->second.url, it->second.path});
+
     // 启动一个后台线程来执行更新任务
-    thread([this] {
-        for(const auto names = ProfileManager::profiles_names;
-            const auto& name : names) {
-            string ua = config_.ua;
-            string url = config_.profiles[name].url;
-            string path = config_.profiles[name].path;
-            if(!ProfileManager::update_profile(url, ua, path)) {
-                {
-                    lock_guard lock(error_queue_mutex_);
-                    error_queue_.push(name);
-                }
-                PostMessageW(main_window_, WM_PROFILE_UPDATE_ERROR, 0, 0);
+    thread([tasks = std::move(tasks), ua = config_.ua,
+            state = update_state_, window = main_window_] {
+        const auto report_error = [&](string msg) {
+            {
+                lock_guard lock(state->mutex);
+                state->errors.push(std::move(msg));
+            }
+            PostMessageW(window, WM_PROFILE_UPDATE_ERROR, 0, 0);
+        };
+        for(const auto& [name, url, path] : tasks) {
+            // 捕获所有异常: 线程中未捕获的异常会触发 std::terminate 使整个程序闪退
+            try {
+                if(!ProfileManager::update_profile(url, ua, path))
+                    report_error(name);
+            } catch(const exception& e) {
+                report_error(format("{}: {}", name, e.what()));
+            } catch(...) {
+                report_error(name);
             }
         }
-        PostMessageW(main_window_, WM_PROFILE_UPDATE_COMPLETE, 0, 0);
+        state->updating.store(false);
+        PostMessageW(window, WM_PROFILE_UPDATE_COMPLETE, 0, 0);
     }).detach();
 }
 
