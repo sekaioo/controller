@@ -78,6 +78,7 @@ A top-level `ScopeGuard` guarantees the firewall rule is removed on any exit pat
 - `components.Config` — parses/validates `config.json` with rapidjson; the
   validation helpers (`check_field`, type-predicate lambdas) throw
   `std::runtime_error` with a field path on any missing/mistyped field.
+  `log_level` is the one optional field (level name string, defaults to `ALL`).
 - `components.I18n` — singleton loading `lang/<code>.json`; use the free
   functions `tr(key)` (UTF-8 `string`) and `wtr(key)` (`wstring`) for all
   user-facing text. Missing keys return `"MISSING KEY: <key>"` rather than throw.

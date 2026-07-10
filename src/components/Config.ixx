@@ -9,6 +9,8 @@ module;
 
 export module components.Config;
 
+import components.Logger;
+
 using namespace std;
 
 // @formatter:off
@@ -17,6 +19,7 @@ public:
     string lang;
     string ua;
     bool block_network;
+    logger::Level log_level = logger::ALL;
     class Kernel {
     public:
         string path;
@@ -53,10 +56,24 @@ void Config::load(const string& filename) {
     populate(json);
 }
 
+// 解析日志等级名, 非法值抛出异常
+static logger::Level parse_log_level(const string& name) {
+    if(name == "ALL") return logger::ALL;
+    if(name == "INFO") return logger::INFO;
+    if(name == "WARN") return logger::WARN;
+    if(name == "ERROR") return logger::ERROR;
+    if(name == "FATAL") return logger::FATAL;
+    if(name == "OFF") return logger::OFF;
+    throw runtime_error(format("Field 'log_level' has invalid value: {}", name));
+}
+
 void Config::populate(const rapidjson::Document& doc) {
     lang = doc["lang"].GetString();
     ua = doc["ua"].GetString();
     block_network = doc["block_network"].GetBool();
+    // log_level 为可选字段, 缺省时记录全部等级
+    if(doc.HasMember("log_level"))
+        log_level = parse_log_level(doc["log_level"].GetString());
     // kernel
     auto tk = doc["kernel"].GetObject();
     kernel.path = tk["path"].GetString();
@@ -99,6 +116,9 @@ void Config::validate_config(const rapidjson::Document& doc) {
     check_field(doc, "block_network", is_bool_type);
     check_field(doc, "kernel", is_object_type);
     check_field(doc, "profiles", is_object_type);
+    // 可选字段, 存在时校验类型
+    if(doc.HasMember("log_level"))
+        check_field(doc, "log_level", is_string_type);
 
     validate_kernel(doc);
     validate_profiles(doc);

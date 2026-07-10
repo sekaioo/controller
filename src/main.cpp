@@ -24,6 +24,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
         Config config;
         config.load(CONFIG_FILE);
         {
+            logger::set_level(config.log_level);
             I18n::instance().initialize(config.lang);
             network_blocker::initialize(config.block_network);
         }

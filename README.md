@@ -25,6 +25,7 @@ features, including the ability to add and manage a custom kernel.
   "lang": "en-US",
   "ua": "curl",
   "block_network": true,
+  "log_level": "INFO",
   "kernel": {
     "path": "kernel/[kernel_file]",
     "command": "[kernel_command]",
@@ -42,3 +43,13 @@ features, including the ability to add and manage a custom kernel.
   }
 }
 ```
+
+### log_level (optional)
+
+Controls the minimum severity written to `data/controller.log`
+(rotated to `controller.log.old` past 512 KB). One of:
+
+`ALL` | `INFO` | `WARN` | `ERROR` | `FATAL` | `OFF`
+
+Messages below the configured level are discarded. Defaults to `ALL`
+(log everything) when the field is omitted; `OFF` disables logging.
