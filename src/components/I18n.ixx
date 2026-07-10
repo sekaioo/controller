@@ -21,7 +21,7 @@ namespace fs = std::filesystem;
 export class I18n {
 public:
     static I18n& instance();
-    void initialize(string_view code) const;
+    void initialize(string_view code);
     [[nodiscard]] string get(string_view key) const;
     I18n(const I18n&) = delete;
     I18n& operator=(const I18n&) = delete;
@@ -52,7 +52,7 @@ I18n& I18n::instance() {
     return instance;
 }
 
-void I18n::initialize(string_view code) const {
+void I18n::initialize(string_view code) {
     const fs::path file_name = format(file_format, LANG_DIR, code);
 
     ifstream file(file_name);

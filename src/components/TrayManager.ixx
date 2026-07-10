@@ -67,9 +67,9 @@ void TrayManager::show_menu() const {
     HMENU hMenu = CreatePopupMenu();
     HMENU hSubMenu = CreatePopupMenu();
 
-    // 填充订阅子菜单
+    // 填充订阅子菜单, 数量上限为菜单 ID 区间大小
     vector<string> names = ProfileManager::profiles_names;
-    for(size_t i = 0; i < names.size() && i < IDM_PROFILE_MAX; ++i) {
+    for(size_t i = 0; i < names.size() && i < IDM_PROFILE_MAX - IDM_PROFILE_BASE; ++i) {
         wstring name = utf8_to_wide(names[i]);
         AppendMenuW(hSubMenu, MF_STRING, IDM_PROFILE_BASE + i, name.c_str());
     }

@@ -221,8 +221,10 @@ void Service::handle_menu_command(const int menuId) const {
                     break;
             }
         }
-    } catch(std::exception&) {
-        on_stop_service();
+    } catch(const std::exception& e) {
+        // 把错误展示给用户而不是静默吞掉
+        MessageBoxW(nullptr, utf8_to_wide(e.what()).c_str(),
+                    wtr("dialog.error").c_str(), MB_ICONERROR);
     }
 }
 

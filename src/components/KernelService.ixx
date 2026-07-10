@@ -114,8 +114,8 @@ void KernelService::monitor_process(stop_token st) {
 
     stop_callback callback(st, [&] { SetEvent(stop_event.h); });
     const array handles = {proc, stop_event.h};
-    const DWORD wait_result =
-            WaitForMultipleObjects(handles.size(), handles.data(), FALSE, INFINITE);
+    const DWORD wait_result = WaitForMultipleObjects(
+            static_cast<DWORD>(handles.size()), handles.data(), FALSE, INFINITE);
 
     switch(wait_result) {
         case WAIT_OBJECT_0 + 0:

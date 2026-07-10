@@ -14,7 +14,8 @@ using vector = std::vector<T>;
 
 // utf-8 to utf-16
 export wstring utf8_to_wide(string_view utf8_str) {
-    const int wide_len = MultiByteToWideChar(CP_UTF8, 0, utf8_str.data(), utf8_str.size(), nullptr, 0);
+    const int wide_len = MultiByteToWideChar(CP_UTF8, 0, utf8_str.data(),
+                                             static_cast<int>(utf8_str.size()), nullptr, 0);
     if(wide_len == 0) return wstring{};
 
     wstring wide_str;
