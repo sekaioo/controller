@@ -51,7 +51,7 @@ export bool download_profile(string_view target_url, string_view ua, const fs::p
     );
     HANDLE raw_handle = launch_hidden_process(command.c_str());
     if(!raw_handle) {
-        Logger::log_with_date_time(format("launch curl failed: {}", target_url), Logger::ERROR);
+        Logger::log(format("launch curl failed: {}", target_url), Logger::ERROR);
         return false;
     }
     HandleGuard process{raw_handle};
@@ -59,18 +59,18 @@ export bool download_profile(string_view target_url, string_view ua, const fs::p
     // 等待最多 8 秒
     const auto exit_code = wait_for_exit(process.h, 8000);
     if(!exit_code) {
-        Logger::log_with_date_time(format("download timed out: {}", target_url), Logger::ERROR);
+        Logger::log(format("download timed out: {}", target_url), Logger::ERROR);
         return false;
     }
     if(*exit_code != 0) {
-        Logger::log_with_date_time(
+        Logger::log(
             format("curl exited with code {}: {}", *exit_code, target_url), Logger::ERROR);
         return false;
     }
 
     // 校验 JSON
     if(target_path.extension() == ".json" && !is_valid_json(temp_path)) {
-        Logger::log_with_date_time(
+        Logger::log(
             format("downloaded profile is not valid JSON: {}", target_url), Logger::ERROR);
         return false;
     }
@@ -79,10 +79,10 @@ export bool download_profile(string_view target_url, string_view ua, const fs::p
     try {
         fs::copy_file(temp_path, target_path, fs::copy_options::overwrite_existing);
         on_exit.dismiss();
-        Logger::log_with_date_time(format("profile updated: {}", target_path.string()), Logger::INFO);
+        Logger::log(format("profile updated: {}", target_path.string()), Logger::INFO);
         return true;
     } catch(const fs::filesystem_error& e) {
-        Logger::log_with_date_time(format("copy profile to target failed: {}", e.what()), Logger::ERROR);
+        Logger::log(format("copy profile to target failed: {}", e.what()), Logger::ERROR);
         return false;
     }
 }

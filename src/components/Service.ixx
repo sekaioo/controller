@@ -317,7 +317,7 @@ void Service::on_update_profiles() const {
     thread([tasks = std::move(tasks), ua = config_.ua,
         state = update_state_, window = main_window_] {
         const auto report_error = [&](string msg) {
-            Logger::log_with_date_time(format("update profile failed: {}", msg), Logger::ERROR);
+            Logger::log(format("update profile failed: {}", msg), Logger::ERROR);
             lock_guard lock(state->mutex);
             state->errors.push(std::move(msg));
         };

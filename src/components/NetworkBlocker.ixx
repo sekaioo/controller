@@ -151,14 +151,14 @@ export namespace network_blocker {
         lock_guard lock(block_mutex_);
         if(!enable_block_network_) return;
         if(add_rule())
-            Logger::log_with_date_time("network blocked", Logger::INFO);
+            Logger::log("network blocked", Logger::INFO);
         else
-            Logger::log_with_date_time("add firewall rule failed", Logger::ERROR);
+            Logger::log("add firewall rule failed", Logger::ERROR);
     }
 
     void unblock() {
         lock_guard lock(block_mutex_);
         if(!remove_rule())
-            Logger::log_with_date_time("remove firewall rule failed", Logger::ERROR);
+            Logger::log("remove firewall rule failed", Logger::ERROR);
     }
 }

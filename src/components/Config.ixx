@@ -9,8 +9,6 @@ module;
 
 export module components.Config;
 
-import components.Logger;
-
 using namespace std;
 namespace json = rapidjson;
 namespace fs = std::filesystem;
@@ -21,15 +19,18 @@ public:
     string lang;
     string ua;
     bool block_network;
-    Logger::Level log_level = Logger::ALL;
-    class Kernel {
-    public:
+    struct Log {
+        bool disabled;
+        string level;
+        string output;
+        bool timestamp;
+    } log;
+    struct Kernel {
         string path;
         string command;
         string config_path;
     } kernel;
-    class Profile {
-    public:
+    struct Profile {
         string path;
         string url;
     };
@@ -38,20 +39,11 @@ public:
     void populate(const json::Document& doc);
 private:
     static void validate_config(const json::Document& doc);
+    static void validate_log(const json::Document& doc);
     static void validate_kernel(const json::Document& doc);
     static void validate_profiles(const json::Document& doc);
 };
 // @formatter:on
-
-static Logger::Level parse_log_level(string_view name) {
-    if(name == "all") return Logger::ALL;
-    if(name == "info") return Logger::INFO;
-    if(name == "warn") return Logger::WARN;
-    if(name == "error") return Logger::ERROR;
-    if(name == "fatal") return Logger::FATAL;
-    if(name == "off") return Logger::OFF;
-    throw runtime_error(format("Field 'log_level' has invalid value: {}", name));
-}
 
 void Config::load(const fs::path& filename) {
     ifstream file(filename);
@@ -72,7 +64,13 @@ void Config::populate(const json::Document& doc) {
     lang = doc["lang"].GetString();
     ua = doc["ua"].GetString();
     block_network = doc["block_network"].GetBool();
-    log_level = parse_log_level(doc["log_level"].GetString());
+
+    // log
+    auto log_object = doc["log"].GetObject();
+    log.disabled = log_object["disabled"].GetString();
+    log.level = log_object["level"].GetString();
+    log.output = log_object["output"].GetString();
+    log.timestamp = log_object["timestamp"].GetBool();
 
     // kernel
     auto kernel_obj = doc["kernel"].GetObject();
@@ -115,14 +113,26 @@ void Config::validate_config(const json::Document& doc) {
     check_field(doc, "lang", is_string_type);
     check_field(doc, "ua", is_string_type);
     check_field(doc, "block_network", is_bool_type);
-    check_field(doc, "log_level", is_string_type);
+    check_field(doc, "log", is_object_type);
     check_field(doc, "kernel", is_object_type);
     check_field(doc, "profiles", is_object_type);
 
     // object field
     validate_kernel(doc);
     validate_profiles(doc);
+    validate_log(doc);
 }
+
+void Config::validate_log(const json::Document& doc) {
+    const auto& kernel_object = doc["log"];
+    constexpr string_view prefix = "log.";
+
+    check_field(kernel_object, "disabled", is_bool_type, prefix);
+    check_field(kernel_object, "level", is_string_type, prefix);
+    check_field(kernel_object, "output", is_string_type, prefix);
+    check_field(kernel_object, "timestamp", is_bool_type, prefix);
+}
+
 
 void Config::validate_kernel(const json::Document& doc) {
     const auto& kernel_object = doc["kernel"];

@@ -74,13 +74,12 @@ bool KernelService::start(wstring&& kernel_path, wstring&& kernel_command) {
     );
 
     if(!raw_handle) {
-        Logger::log_with_date_time(
-            format("launch kernel failed, GetLastError={}", GetLastError()), Logger::ERROR);
+        Logger::log(format("launch kernel failed, GetLastError={}", GetLastError()), Logger::ERROR);
         network_blocker::block();
         return false;
     }
 
-    Logger::log_with_date_time("kernel started", Logger::INFO);
+    Logger::log("kernel started", Logger::INFO);
     process_handle_.store(raw_handle);
     monitor_thread_ = jthread([this](stop_token st) { monitor_process(std::move(st)); });
     network_blocker::unblock();
@@ -124,18 +123,18 @@ void KernelService::monitor_process(stop_token st) {
     stop_callback callback(st, [&] { SetEvent(stop_event.h); });
     const array handles = {proc, stop_event.h};
     const DWORD wait_result = WaitForMultipleObjects(
-            static_cast<DWORD>(handles.size()), handles.data(), FALSE, INFINITE);
+        static_cast<DWORD>(handles.size()), handles.data(), FALSE, INFINITE);
 
     switch(wait_result) {
         case WAIT_OBJECT_0 + 0:
-            Logger::log_with_date_time("kernel exited unexpectedly", Logger::ERROR);
+            Logger::log("kernel exited unexpectedly", Logger::ERROR);
             if(main_window_)
                 PostMessageW(main_window_, WM_KERNEL_TERMINATED, 0, 0);
             break;
 
         case WAIT_OBJECT_0 + 1:
             stop_process_gracefully(proc);
-            Logger::log_with_date_time("kernel stopped", Logger::INFO);
+            Logger::log("kernel stopped", Logger::INFO);
             break;
 
         default:

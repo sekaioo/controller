@@ -22,25 +22,30 @@ features, including the ability to add and manage a custom kernel.
 
 ```json
 {
-  "lang": "en-US",
-  "ua": "curl",
-  "block_network": true,
-  "log_level": "info",
-  "kernel": {
-    "path": "kernel/[kernel_file]",
-    "command": "[kernel_command]",
-    "config_path": "kernel/[kernel_config_file]"
-  },
-  "profiles": {
-    "tag1": {
-      "path": "tag1.json",
-      "url": "https://example.com"
+    "lang": "en-US",
+    "ua": "curl",
+    "block_network": true,
+    "log": {
+        "disabled": false,
+        "level": "info",
+        "output": "data/controller.log",
+        "timestamp": true
     },
-    "tag2": {
-      "path": "tag2.json",
-      "url": "https://example.org"
+    "kernel": {
+        "path": "kernel/[kernel_file]",
+        "command": "[kernel_command]",
+        "config_path": "kernel/[kernel_config_file]"
+    },
+    "profiles": {
+        "tag1": {
+            "path": "tag1.json",
+            "url": "https://example.com"
+        },
+        "tag2": {
+            "path": "tag2.json",
+            "url": "https://example.org"
+        }
     }
-  }
 }
 ```
 

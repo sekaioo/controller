@@ -24,7 +24,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
         Config config;
         config.load(exe_relative_path(CONFIG_FILE));
         {
-            Logger::level = config.log_level;
+            Logger::initialize(config.log.disabled, config.log.level, config.log.output, config.log.timestamp);
             I18n::instance().initialize(config.lang);
             network_blocker::initialize(config.block_network);
         }
@@ -36,7 +36,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
         } else
             return EXIT_FAILURE;
     } catch(std::exception& msg) {
-        Logger::log_with_date_time(msg.what(), Logger::FATAL);
+        Logger::log(msg.what(), Logger::FATAL);
         MessageBoxW(nullptr, utf8_to_wide(msg.what()).c_str(), L"error", MB_ICONINFORMATION);
         return EXIT_FAILURE;
     }
