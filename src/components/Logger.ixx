@@ -18,7 +18,7 @@ namespace fs = std::filesystem;
 export class Logger {
 public:
     enum Level {
-        TRACE   = 0,
+        TRACE = 0,
         INFO  = 1,
         WARN  = 2,
         ERROR = 3,

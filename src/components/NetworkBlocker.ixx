@@ -158,7 +158,9 @@ export namespace network_blocker {
 
     void unblock() {
         lock_guard lock(block_mutex_);
-        if(!remove_rule())
+        if(remove_rule())
+            Logger::log("network unblocked", Logger::INFO);
+        else
             Logger::log("remove firewall rule failed", Logger::ERROR);
     }
 }

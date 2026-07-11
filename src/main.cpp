@@ -40,5 +40,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
         MessageBoxW(nullptr, utf8_to_wide(msg.what()).c_str(), L"error", MB_ICONINFORMATION);
         return EXIT_FAILURE;
     }
+    Logger::log("controller exit", Logger::TRACE);
     return EXIT_SUCCESS;
 }
