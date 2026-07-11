@@ -304,10 +304,8 @@ void Service::on_switch_profile(const int profile_index) const {
 }
 
 void Service::on_update_profiles() const {
-    // 已有更新任务在运行时忽略, 防止并发下载同一文件
     if(update_state_->updating.exchange(true)) return;
 
-    // 在主线程先把所需配置拷贝成快照, 后台线程不再访问 this / config_
     struct Task {
         string name, url, path;
     };
@@ -316,17 +314,14 @@ void Service::on_update_profiles() const {
     for(const auto& [name, profile] : config_.profiles)
         tasks.push_back({name, profile.url, profile.path});
 
-    // 启动一个后台线程来执行更新任务
     thread([tasks = std::move(tasks), ua = config_.ua,
-            state = update_state_, window = main_window_] {
-        // 失败项只收集不弹窗, 全部结束后由 WM_PROFILE_UPDATE_COMPLETE 一次性汇总
+        state = update_state_, window = main_window_] {
         const auto report_error = [&](string msg) {
             Log::log_with_date_time(format("update profile failed: {}", msg), Log::ERROR);
             lock_guard lock(state->mutex);
             state->errors.push(std::move(msg));
         };
         for(const auto& [name, url, path] : tasks) {
-            // 捕获所有异常: 线程中未捕获的异常会触发 std::terminate 使整个程序闪退
             try {
                 if(!update_profile(url, ua, path))
                     report_error(name);

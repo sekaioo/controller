@@ -65,7 +65,7 @@ private:
 // @formatter:on
 
 // 模块内部状态: 配置开关与串行化多线程调用的互斥锁
-static bool enable_block_network_ = false;
+static bool enable_block_network_ = true;
 static mutex block_mutex_;
 
 static bool add_rule() {
@@ -143,7 +143,6 @@ static bool remove_rule() {
 }
 
 export namespace network_blocker {
-    // 记录配置开关, block() 仅在开关打开时生效
     void initialize(const bool enable_block_network) {
         enable_block_network_ = enable_block_network;
     }

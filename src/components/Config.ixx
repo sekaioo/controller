@@ -12,6 +12,8 @@ export module components.Config;
 import components.Log;
 
 using namespace std;
+namespace json = rapidjson;
+namespace fs = std::filesystem;
 
 // @formatter:off
 export class Config {
@@ -32,32 +34,16 @@ public:
         string url;
     };
     map<string, Profile> profiles;
-    void load(const filesystem::path& filename);
-    void populate(const rapidjson::Document& doc);
+    void load(const fs::path& filename);
+    void populate(const json::Document& doc);
 private:
-    static void validate_config(const rapidjson::Document& doc);
-    static void validate_kernel(const rapidjson::Document& doc);
-    static void validate_profiles(const rapidjson::Document& doc);
+    static void validate_config(const json::Document& doc);
+    static void validate_kernel(const json::Document& doc);
+    static void validate_profiles(const json::Document& doc);
 };
 // @formatter:on
 
-void Config::load(const filesystem::path& filename) {
-    ifstream file(filename);
-    if(!file.is_open())
-        throw runtime_error("open config file failed");
-
-    rapidjson::Document json;
-    rapidjson::IStreamWrapper isw(file);
-    json.ParseStream(isw);
-    if(json.HasParseError())
-        throw runtime_error("JSON parse error");
-
-    validate_config(json);
-    populate(json);
-}
-
-// 解析日志等级名 (小写), 非法值抛出异常
-static Log::Level parse_log_level(const string& name) {
+static Log::Level parse_log_level(string_view name) {
     if(name == "all") return Log::ALL;
     if(name == "info") return Log::INFO;
     if(name == "warn") return Log::WARN;
@@ -67,33 +53,47 @@ static Log::Level parse_log_level(const string& name) {
     throw runtime_error(format("Field 'log_level' has invalid value: {}", name));
 }
 
-void Config::populate(const rapidjson::Document& doc) {
+void Config::load(const fs::path& filename) {
+    ifstream file(filename);
+    if(!file.is_open())
+        throw runtime_error("open config file failed");
+
+    json::Document json;
+    json::IStreamWrapper isw(file);
+    json.ParseStream(isw);
+    if(json.HasParseError())
+        throw runtime_error("JSON parse error");
+
+    validate_config(json);
+    populate(json);
+}
+
+void Config::populate(const json::Document& doc) {
     lang = doc["lang"].GetString();
     ua = doc["ua"].GetString();
     block_network = doc["block_network"].GetBool();
-    // log_level 为可选字段, 缺省时记录全部等级
-    if(doc.HasMember("log_level"))
-        log_level = parse_log_level(doc["log_level"].GetString());
+    log_level = parse_log_level(doc["log_level"].GetString());
+
     // kernel
-    auto tk = doc["kernel"].GetObject();
-    kernel.path = tk["path"].GetString();
-    kernel.command = tk["command"].GetString();
-    kernel.config_path = tk["config_path"].GetString();
+    auto kernel_obj = doc["kernel"].GetObject();
+    kernel.path = kernel_obj["path"].GetString();
+    kernel.command = kernel_obj["command"].GetString();
+    kernel.config_path = kernel_obj["config_path"].GetString();
+
     // profiles
-    const auto& prof = doc["profiles"].GetObject();
-    for(auto it = prof.MemberBegin(); it != prof.MemberEnd(); ++it) {
-        Profile tp;
-        tp.path = it->value["path"].GetString();
-        tp.url = it->value["url"].GetString();
-        profiles[it->name.GetString()] = tp;
+    const auto& profiles_obj = doc["profiles"].GetObject();
+    for(auto it = profiles_obj.MemberBegin(); it != profiles_obj.MemberEnd(); ++it) {
+        Profile profile;
+        profile.path = it->value["path"].GetString();
+        profile.url = it->value["url"].GetString();
+        profiles[it->name.GetString()] = profile;
     }
 }
 
 // 字段检查辅助函数
 template<typename TypeChecker>
-static void check_field(const rapidjson::Value& object, string_view field, TypeChecker checker,
+static void check_field(const json::Value& object, string_view field, TypeChecker checker,
                         string_view error_prefix = "") {
-    // rapidjson 是 C 风格接口, 需要 \0 结尾, 在边界处构造 C 字符串
     const string field_str(field);
     if(!object.HasMember(field_str.c_str())) {
         constexpr auto missing_key_format = "Missing required field: {}{}";
@@ -110,21 +110,21 @@ auto is_bool_type = [](const auto& v) { return v.IsBool(); };
 auto is_object_type = [](const auto& v) { return v.IsObject(); };
 auto is_array_type = [](const auto& v) { return v.IsArray(); };
 
-void Config::validate_config(const rapidjson::Document& doc) {
+void Config::validate_config(const json::Document& doc) {
+    // top field
     check_field(doc, "lang", is_string_type);
     check_field(doc, "ua", is_string_type);
     check_field(doc, "block_network", is_bool_type);
+    check_field(doc, "log_level", is_string_type);
     check_field(doc, "kernel", is_object_type);
     check_field(doc, "profiles", is_object_type);
-    // 可选字段, 存在时校验类型
-    if(doc.HasMember("log_level"))
-        check_field(doc, "log_level", is_string_type);
 
+    // object field
     validate_kernel(doc);
     validate_profiles(doc);
 }
 
-void Config::validate_kernel(const rapidjson::Document& doc) {
+void Config::validate_kernel(const json::Document& doc) {
     const auto& kernel_object = doc["kernel"];
     constexpr string_view prefix = "kernel.";
 
@@ -133,7 +133,7 @@ void Config::validate_kernel(const rapidjson::Document& doc) {
     check_field(kernel_object, "config_path", is_string_type, prefix);
 }
 
-void Config::validate_profiles(const rapidjson::Document& doc) {
+void Config::validate_profiles(const json::Document& doc) {
     const auto& profiles = doc["profiles"];
 
     for(auto it = profiles.MemberBegin(); it != profiles.MemberEnd(); ++it) {

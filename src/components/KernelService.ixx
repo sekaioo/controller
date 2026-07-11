@@ -65,7 +65,7 @@ HANDLE KernelService::create_kill_on_close_job() {
 bool KernelService::start(wstring&& kernel_path, wstring&& kernel_command) {
     if(is_running()) return true;
 
-    const wstring executable_dir = get_executable_directory();
+    const wstring executable_dir = exe_relative_path("").wstring();
     const wstring full_kernel_path = format(L"{}/{}", executable_dir, kernel_path);
     const wstring service_dir = fs::path(full_kernel_path).parent_path().wstring();
 

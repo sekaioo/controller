@@ -27,7 +27,6 @@ public:
         FATAL = 4,
         OFF = 5
     };
-    // 低于该等级的消息被丢弃, 启动时从 config.log_level 赋值
     inline static Level level = ALL;
     static void log_with_date_time(string_view message, Level level = ALL) noexcept;
 private:
@@ -36,7 +35,6 @@ private:
 };
 // @formatter:on
 
-// 超过阈值时轮转: 旧日志顶替 .old, 全程使用不抛异常的重载
 void Log::rotate_if_needed() {
     const fs::path log_file = exe_relative_path(LOG_FILE);
     error_code ec;
@@ -47,7 +45,6 @@ void Log::rotate_if_needed() {
     }
 }
 
-// 写一行日志, 日志绝不能反过来影响程序运行, 任何异常都吞掉
 void Log::log_with_date_time(string_view message, const Level message_level) noexcept {
     if(message_level < level) return;
 

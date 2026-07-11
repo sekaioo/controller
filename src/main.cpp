@@ -40,6 +40,5 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int) {
         MessageBoxW(nullptr, utf8_to_wide(msg.what()).c_str(), L"error", MB_ICONINFORMATION);
         return EXIT_FAILURE;
     }
-    // 注意: 不能使用 exit(), 它不会执行局部对象析构, unblock_on_exit 将不会生效
     return EXIT_SUCCESS;
 }

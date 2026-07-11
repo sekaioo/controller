@@ -67,39 +67,31 @@ export wstring quote_argument(std::wstring_view arg) {
             continue;
         }
         if(c == L'"') {
-            // 引号前的反斜杠需要成对转义, 引号本身再加一个反斜杠
             result.append(backslashes * 2 + 1, L'\\');
         } else
             result.append(backslashes, L'\\');
         result += c;
         backslashes = 0;
     }
-    // 结尾的反斜杠需要成对转义, 避免吞掉收尾引号
     result.append(backslashes * 2, L'\\');
     result += L'"';
     return result;
 }
 
 // 取程序路径
-export wstring get_executable_directory();
+wstring get_executable_directory() {
+    vector<wchar_t> buffer;
+    DWORD size;
+    do {
+        buffer.resize(buffer.empty() ? MAX_PATH : buffer.size() * 2);
+        size = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+    } while(size == buffer.size() && GetLastError() == ERROR_INSUFFICIENT_BUFFER);
+    if(size == 0) return L"";
+    return std::filesystem::path(buffer.data(), buffer.data() + size).parent_path().wstring();
+}
 
-// 基于程序目录构造绝对路径 (relative 为 UTF-8), 避免依赖当前工作目录
+// 基于程序目录构造绝对路径 (relative 为 UTF-8)
 export std::filesystem::path exe_relative_path(string_view relative) {
     static const std::filesystem::path base = get_executable_directory();
     return base / utf8_to_wide(relative);
-}
-
-wstring get_executable_directory() {
-    vector<wchar_t> buffer(MAX_PATH);
-    DWORD size = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
-
-    while(size == buffer.size() && GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
-        buffer.resize(buffer.size() * 2);
-        size = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
-    }
-
-    if(size == 0)return L"";
-
-    std::filesystem::path full_path(buffer.data());
-    return full_path.parent_path().wstring();
 }

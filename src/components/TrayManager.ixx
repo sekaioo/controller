@@ -22,7 +22,6 @@ export class TrayManager {
 public:
     TrayManager(shared_ptr<KernelService> service, const vector<string>& profile_names) :
         service_(move(service)) {
-        // 订阅名只需转换一次宽字符, 供每次构建菜单使用
         for(const auto& name : profile_names)
             profile_names_.push_back(utf8_to_wide(name));
     }
