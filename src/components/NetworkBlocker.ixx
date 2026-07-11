@@ -18,7 +18,7 @@ export module components.NetworkBlocker;
 
 import components.Config;
 import components.I18n;
-import components.Log;
+import components.Logger;
 
 using namespace std;
 
@@ -151,14 +151,14 @@ export namespace network_blocker {
         lock_guard lock(block_mutex_);
         if(!enable_block_network_) return;
         if(add_rule())
-            Log::log_with_date_time("network blocked", Log::INFO);
+            Logger::log_with_date_time("network blocked", Logger::INFO);
         else
-            Log::log_with_date_time("add firewall rule failed", Log::ERROR);
+            Logger::log_with_date_time("add firewall rule failed", Logger::ERROR);
     }
 
     void unblock() {
         lock_guard lock(block_mutex_);
         if(!remove_rule())
-            Log::log_with_date_time("remove firewall rule failed", Log::ERROR);
+            Logger::log_with_date_time("remove firewall rule failed", Logger::ERROR);
     }
 }

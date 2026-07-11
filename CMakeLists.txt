@@ -13,8 +13,7 @@ add_executable(controller WIN32)
 # Set the generated executable file name
 set_target_properties(controller PROPERTIES OUTPUT_NAME controller)
 
-# UAC manifest: only the tray app requires administrator (for the firewall
-# rule); test executables stay asInvoker so they can run unelevated
+# UAC manifest: only the tray app requires administrator
 set_target_properties(controller PROPERTIES
         LINK_FLAGS "/MANIFESTUAC:\"level='requireAdministrator' uiAccess='false'\"")
 
@@ -52,7 +51,7 @@ target_sources(controller_tests
         PRIVATE tests/tests.cpp
         PRIVATE FILE_SET CXX_MODULES FILES
         src/common/Utils.ixx
-        src/components/Log.ixx
+        src/components/Logger.ixx
         src/components/Config.ixx
 )
 target_include_directories(controller_tests PRIVATE include)

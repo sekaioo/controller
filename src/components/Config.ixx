@@ -9,7 +9,7 @@ module;
 
 export module components.Config;
 
-import components.Log;
+import components.Logger;
 
 using namespace std;
 namespace json = rapidjson;
@@ -21,7 +21,7 @@ public:
     string lang;
     string ua;
     bool block_network;
-    Log::Level log_level = Log::ALL;
+    Logger::Level log_level = Logger::ALL;
     class Kernel {
     public:
         string path;
@@ -43,13 +43,13 @@ private:
 };
 // @formatter:on
 
-static Log::Level parse_log_level(string_view name) {
-    if(name == "all") return Log::ALL;
-    if(name == "info") return Log::INFO;
-    if(name == "warn") return Log::WARN;
-    if(name == "error") return Log::ERROR;
-    if(name == "fatal") return Log::FATAL;
-    if(name == "off") return Log::OFF;
+static Logger::Level parse_log_level(string_view name) {
+    if(name == "all") return Logger::ALL;
+    if(name == "info") return Logger::INFO;
+    if(name == "warn") return Logger::WARN;
+    if(name == "error") return Logger::ERROR;
+    if(name == "fatal") return Logger::FATAL;
+    if(name == "off") return Logger::OFF;
     throw runtime_error(format("Field 'log_level' has invalid value: {}", name));
 }
 

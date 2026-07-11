@@ -9,7 +9,7 @@ module;
 
 #include "constants.h"
 
-export module components.Log;
+export module components.Logger;
 
 import common.Utils;
 
@@ -17,7 +17,7 @@ using namespace std;
 namespace fs = std::filesystem;
 
 // @formatter:off
-export class Log {
+export class Logger {
 public:
     enum Level {
         ALL = 0,
@@ -35,7 +35,7 @@ private:
 };
 // @formatter:on
 
-void Log::rotate_if_needed() {
+void Logger::rotate_if_needed() {
     const fs::path log_file = exe_relative_path(LOG_FILE);
     error_code ec;
     if(fs::exists(log_file, ec) && fs::file_size(log_file, ec) > LOG_MAX_SIZE) {
@@ -45,7 +45,7 @@ void Log::rotate_if_needed() {
     }
 }
 
-void Log::log_with_date_time(string_view message, const Level message_level) noexcept {
+void Logger::log_with_date_time(string_view message, const Level message_level) noexcept {
     if(message_level < level) return;
 
     try {

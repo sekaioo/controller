@@ -28,7 +28,7 @@ export module components.Service;
 import components.Config;
 import components.I18n;
 import components.KernelService;
-import components.Log;
+import components.Logger;
 import components.NetworkBlocker;
 import components.TrayManager;
 import common.Utils;
@@ -317,7 +317,7 @@ void Service::on_update_profiles() const {
     thread([tasks = std::move(tasks), ua = config_.ua,
         state = update_state_, window = main_window_] {
         const auto report_error = [&](string msg) {
-            Log::log_with_date_time(format("update profile failed: {}", msg), Log::ERROR);
+            Logger::log_with_date_time(format("update profile failed: {}", msg), Logger::ERROR);
             lock_guard lock(state->mutex);
             state->errors.push(std::move(msg));
         };

@@ -17,7 +17,7 @@
 
 import common.Utils;
 import components.Config;
-import components.Log;
+import components.Logger;
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -112,7 +112,7 @@ static void test_config_valid() {
     CHECK(config.profiles.at("a").path == "a.json");
     CHECK(config.profiles.at("a").url == "https://example.com");
     // log_level 缺省时为 ALL
-    CHECK(config.log_level == Log::ALL);
+    CHECK(config.log_level == Logger::ALL);
 }
 
 static void test_config_log_level() {
@@ -124,12 +124,12 @@ static void test_config_log_level() {
           "profiles": {}
         })");
     };
-    CHECK(with_level("all").log_level == Log::ALL);
-    CHECK(with_level("info").log_level == Log::INFO);
-    CHECK(with_level("warn").log_level == Log::WARN);
-    CHECK(with_level("error").log_level == Log::ERROR);
-    CHECK(with_level("fatal").log_level == Log::FATAL);
-    CHECK(with_level("off").log_level == Log::OFF);
+    CHECK(with_level("all").log_level == Logger::ALL);
+    CHECK(with_level("info").log_level == Logger::INFO);
+    CHECK(with_level("warn").log_level == Logger::WARN);
+    CHECK(with_level("error").log_level == Logger::ERROR);
+    CHECK(with_level("fatal").log_level == Logger::FATAL);
+    CHECK(with_level("off").log_level == Logger::OFF);
     // 只接受小写等级名
     CHECK(throws([&] { with_level("INFO"); }));
     CHECK(throws([&] { with_level("verbose"); }));
