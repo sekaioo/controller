@@ -77,8 +77,8 @@ public:
         instance_handle_(instance_handle),
         profile_names_(profile_names_from(config)),
         current_profile_index_(detect_current_profile(config, profile_names_)),
-        service_(make_shared<KernelService>()),
-        tray_manager_(make_unique<TrayManager>(service_, profile_names_)),
+        kernel_service_(make_shared<KernelService>()),
+        tray_manager_(make_unique<TrayManager>(kernel_service_, profile_names_)),
         wm_taskbarcreated_(RegisterWindowMessageW(L"TaskbarCreated")) {
         if(!initialize())
             throw runtime_error("Service initialization failed");
@@ -111,7 +111,7 @@ private:
     HINSTANCE instance_handle_;
     vector<string> profile_names_;
     mutable int current_profile_index_;
-    shared_ptr<KernelService> service_;
+    shared_ptr<KernelService> kernel_service_;
     unique_ptr<TrayManager> tray_manager_;
     shared_ptr<UpdateState> update_state_ = make_shared<UpdateState>();
     UINT wm_taskbarcreated_;
@@ -140,7 +140,7 @@ bool Service::initialize() {
     tray_manager_->initialize(main_window_, instance_handle_);
 
     // 注册 kernel 服务的观察者
-    service_->register_observer(main_window_);
+    kernel_service_->register_observer(main_window_);
     on_start_service();
     return true;
 }
@@ -225,7 +225,7 @@ LRESULT Service::handle_message(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         }
 
         case WM_CLOSE:
-            service_->stop();
+            kernel_service_->stop();
             tray_manager_->cleanup();
             DestroyWindow(hWnd);
             break;
@@ -287,7 +287,7 @@ string Service::pop_all_errors() const {
 
 void Service::on_switch_profile(const int profile_index) const {
     if(profile_index >= 0 && static_cast<size_t>(profile_index) < profile_names_.size()) {
-        const bool is_running = service_->is_running();
+        const bool is_running = kernel_service_->is_running();
 
         if(is_running) on_stop_service();
         try {
@@ -337,13 +337,13 @@ void Service::on_update_profiles() const {
 }
 
 void Service::on_start_service() const {
-    if(!service_->start(utf8_to_wide(config_.kernel.path), utf8_to_wide(config_.kernel.command)))
+    if(!kernel_service_->start(utf8_to_wide(config_.kernel.path), utf8_to_wide(config_.kernel.command)))
         MessageBoxW(nullptr, wtr("dialog.start_kernel_failed").c_str(),
                     wtr("dialog.error").c_str(), MB_ICONERROR);
 }
 
 void Service::on_stop_service() const {
-    if(!service_->stop())
+    if(!kernel_service_->stop())
         MessageBoxW(nullptr, wtr("dialog.stop_kernel_failed").c_str(),
                     wtr("dialog.error").c_str(), MB_ICONERROR);
 }

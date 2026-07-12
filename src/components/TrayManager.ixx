@@ -21,7 +21,7 @@ using namespace std;
 export class TrayManager {
 public:
     TrayManager(shared_ptr<KernelService> service, const vector<string>& profile_names) :
-        service_(move(service)) {
+        kernel_service_(move(service)) {
         for(const auto& name : profile_names)
             profile_names_.push_back(utf8_to_wide(name));
     }
@@ -35,7 +35,7 @@ private:
     NOTIFYICONDATAW tray_icon_ = {sizeof(NOTIFYICONDATAW)};
     HWND main_window_ = nullptr;
     HINSTANCE instance_handle_ = nullptr;
-    shared_ptr<KernelService> service_ = nullptr;
+    shared_ptr<KernelService> kernel_service_ = nullptr;
     vector<wstring> profile_names_;
 };
 // @formatter:on
@@ -83,7 +83,7 @@ void TrayManager::show_menu(const int checked_profile_index, const bool updating
     AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
 
     // 启动 / 停止按钮状态
-    if(service_->is_running()) {
+    if(kernel_service_->is_running()) {
         AppendMenuW(hMenu, MF_STRING | MF_GRAYED, IDM_START_KERNEL, wtr("tray.start_kernel").c_str());
         AppendMenuW(hMenu, MF_STRING, IDM_STOP_KERNEL, wtr("tray.stop_kernel").c_str());
     } else {
