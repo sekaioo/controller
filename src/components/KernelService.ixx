@@ -10,7 +10,7 @@ module;
 
 #include "resource.h"
 
-// windows.h 定义的 ERROR 宏与 Log::ERROR 冲突
+// windows.h 定义的 ERROR 宏与 Logger::ERROR 冲突
 #ifdef ERROR
 #undef ERROR
 #endif

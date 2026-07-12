@@ -60,9 +60,11 @@ A top-level `ScopeGuard` guarantees the firewall rule is removed on any exit pat
 **Module map (`export module` name → file):**
 - `components.Service` — owns the hidden message-only main window and the Win32
   message loop; wires everything together. It routes tray/menu commands and the
-  custom `WM_*` messages (defined in `resource.h`) to handlers, owns the
-  `KernelService` and `TrayManager`, and holds a thread-safe error queue used to
-  pass async profile-update errors back to the UI thread via `PostMessage`.
+  custom `WM_*` messages (defined in `resource.h`) to handlers and owns the
+  `ProfileManager`, `KernelService`, and `TrayManager`. Async profile-update
+  results come back via a `ProfileManager` callback that `PostMessage`s
+  `WM_PROFILE_UPDATE_COMPLETE` (with the `UpdateResult` in `wParam`) to the UI
+  thread, which then shows the outcome / pulls failures via `take_errors()`.
 - `components.KernelService` — launches the kernel as a hidden process and runs a
   `std::jthread` monitor. If the kernel exits on its own it posts
   `WM_KERNEL_TERMINATED`; on requested stop it sends a graceful `CTRL_C_EVENT`
@@ -77,17 +79,30 @@ A top-level `ScopeGuard` guarantees the firewall rule is removed on any exit pat
   built dynamically from the profile names passed in by `Service`.
 - `components.Config` — parses/validates `config.json` with rapidjson; the
   validation helpers (`check_field`, type-predicate lambdas) throw
-  `std::runtime_error` with a field path on any missing/mistyped field.
-  `log_level` is the one optional field (lowercase level name string, e.g.
-  `"info"`, defaults to `Log::ALL`).
+  `std::runtime_error` with a field path on any missing/mistyped field. The
+  `log` object holds `disabled`/`level`/`output`/`timestamp`; `level` is a
+  lowercase level name string (e.g. `"info"`) parsed by `Logger`.
 - `components.I18n` — singleton loading `lang/<code>.json`; use the free
   functions `tr(key)` (UTF-8 `string`) and `wtr(key)` (`wstring`) for all
   user-facing text. Missing keys return `"MISSING KEY: <key>"` rather than throw.
-- `profile.Manager` — free functions. `switch_profile` copies a file from
-  `data/profiles/` over the kernel's config path; `update_profile` delegates to
-  the downloader. Profile names/menu order derive from `Config::profiles` (a
-  sorted `std::map`); `Service` caches them in `profile_names_` and hands them
-  to `TrayManager`.
+- `profile.Manager` — the `ProfileManager` class owns the subscription data,
+  operations, and the async update machinery. Constructed from `Config`, it holds
+  *by value* the profiles map (a sorted `std::map`), the `ua`, and the kernel
+  config path. It exposes `names()` (menu order) / `current_index()` and the
+  operations as methods: `switch_profile(index)` copies a profile over the
+  kernel's config path and updates the current index; `update_profile(name,
+  on_result)` and `update_all_profile(on_result)` both update in the background
+  (one profile / all profiles) and report the outcome via the same callback —
+  both delegate to a private `run_updates(tasks, on_result)`. The update state
+  (`updating` flag + failure queue, mutex-guarded) lives in a
+  `shared_ptr<UpdateState>` member; the worker thread captures a by-value `tasks`
+  snapshot plus that `shared_ptr`, so it is fully self-contained and safe even if
+  the `ProfileManager` is destroyed. `run_updates` self-guards re-entry
+  (`updating.exchange`) and reports one of `UpdateResult::{Busy,Success,Failed}`
+  through `on_result` (invoked on the worker thread, or synchronously for
+  `Busy`); `take_errors()` drains the
+  accumulated failures. `Service` holds a `ProfileManager` and hands its
+  `names()` to `TrayManager`.
 - `profile.Downloader` — `download_profile` shells out to `curl` (hidden
   process, 8s timeout) into a temp file, validates it parses as JSON when the
   target is `.json`, then copies into place.
@@ -95,13 +110,14 @@ A top-level `ScopeGuard` guarantees the firewall rule is removed on any exit pat
   `CreateProcessW` wrapper used for both kernel and curl), `get_executable_directory`.
 - `common.Common` — RAII guards: `MutexGuard` (single-instance), `HandleGuard`
   (owns a `HANDLE`), `ScopeGuard` (dismissable cleanup lambda).
-- `components.Log` — `Log` class (all-static, modeled on trojan's logger):
-  `Log::log_with_date_time(message, Log::INFO)` appends to `data/controller.log`
-  (UTF-8, mutex-guarded, rotates to `.log.old` past `LOG_MAX_SIZE`). The public
-  static `Log::level` is the threshold (`ALL`→`OFF`); messages below it are
-  discarded. Logging must never throw or affect program flow. Consumers that
-  include `windows.h` must `#undef ERROR` in the global module fragment before
-  using `Log::ERROR`.
+- `components.Logger` — `Logger` class (all-static, modeled on trojan's logger):
+  `Logger::log(message, Logger::INFO)` writes to the configured `output` file
+  (UTF-8, mutex-guarded), with levels `TRACE < INFO < WARN < ERROR < FATAL`.
+  `Logger::initialize(disabled, level, output, timestamp)` is called from the
+  config's `log` object at startup; the parsed `level` is the threshold, messages
+  below it are discarded, and `disabled` mutes everything. Logging is `noexcept`
+  and must never throw or affect program flow. Consumers that include `windows.h`
+  must `#undef ERROR` in the global module fragment before using `Logger::ERROR`.
 
 ## Conventions
 
