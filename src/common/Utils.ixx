@@ -2,6 +2,8 @@ module;
 #include <Windows.h>
 
 #include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -94,4 +96,12 @@ wstring get_executable_directory() {
 export std::filesystem::path exe_relative_path(string_view relative) {
     static const std::filesystem::path base = get_executable_directory();
     return base / utf8_to_wide(relative);
+}
+
+
+// 读取整个文件内容, 打不开返回空
+export std::string read_file_bytes(const std::filesystem::path& path) {
+    std::ifstream file(path, std::ios::binary);
+    if(!file.is_open()) return {};
+    return {std::istreambuf_iterator(file), std::istreambuf_iterator<char>()};
 }
