@@ -10,7 +10,7 @@ module;
 #include "constants.h"
 #include "resource.h"
 
-// windows.h 定义的 ERROR 宏与 Log::ERROR 冲突
+// windows.h 定义的 ERROR 宏与 Logger::ERROR 冲突
 #ifdef ERROR
 #undef ERROR
 #endif
@@ -37,8 +37,7 @@ public:
         instance_handle_(instance_handle),
         profiles_manager_(config),
         kernel_service_(make_shared<KernelService>()),
-        tray_manager_(make_unique<TrayManager>(kernel_service_, profiles_manager_.names())),
-        wm_taskbarcreated_(RegisterWindowMessageW(L"TaskbarCreated")) {
+        tray_manager_(make_unique<TrayManager>(kernel_service_, profiles_manager_.names())) {
         if(!initialize())
             throw runtime_error("Service initialization failed");
     }
@@ -62,7 +61,6 @@ private:
     mutable ProfileManager profiles_manager_;
     shared_ptr<KernelService> kernel_service_;
     unique_ptr<TrayManager> tray_manager_;
-    UINT wm_taskbarcreated_;
 };
 // @formatter:on
 
@@ -83,11 +81,7 @@ bool Service::initialize() {
                                    nullptr, nullptr, instance_handle_, this);
 
     if(!main_window_) return false;
-
-    // 初始化托盘图标
     tray_manager_->initialize(main_window_, instance_handle_);
-
-    // 注册 kernel 服务的观察者
     kernel_service_->register_observer(main_window_);
     on_start_service();
     return true;
@@ -117,8 +111,8 @@ LRESULT CALLBACK Service::window_proc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
 }
 
 LRESULT Service::handle_message(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) const {
-    // explorer 崩溃时刷新托盘
-    if(message == wm_taskbarcreated_) {
+    static UINT wm_taskbarcreated = RegisterWindowMessageW(L"TaskbarCreated");
+    if(message == wm_taskbarcreated) {
         tray_manager_->refresh_tray();
         return 0;
     }
@@ -126,24 +120,17 @@ LRESULT Service::handle_message(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
         case WM_CREATE:
             SetTimer(hWnd, 1, 2000, nullptr);
             break;
-
         case WM_TIMER:
             if(tray_manager_->refresh_tray())
                 KillTimer(hWnd, 1);
             break;
-
-        // 托盘图标消息
         case WM_SHOW_MENU:
             if(lParam == WM_LBUTTONUP || lParam == WM_RBUTTONUP)
                 tray_manager_->show_menu(profiles_manager_.current_index(), profiles_manager_.is_updating());
             break;
-
-        // 处理菜单命令
         case WM_COMMAND:
             handle_menu_command(LOWORD(wParam));
             break;
-
-        // 内核停止运行
         case WM_KERNEL_TERMINATED: {
             wstring msg = config_.block_network ?
                               format(L"{}, {}", wtr("dialog.kernel_stopped"), wtr("dialog.network_blocked")) :
@@ -152,8 +139,6 @@ LRESULT Service::handle_message(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
             MessageBoxW(nullptr, msg.c_str(), title.c_str(),MB_ICONINFORMATION);
         }
         break;
-
-        // 订阅更新完成, 依结果提示: 成功报完成, 有失败列出失败项, 正在更新则忽略
         case WM_PROFILE_UPDATE_COMPLETE:
             switch(static_cast<ProfileManager::UpdateResult>(wParam)) {
                 case ProfileManager::UpdateResult::Busy:
@@ -173,17 +158,14 @@ LRESULT Service::handle_message(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
                 }
             }
             break;
-
         case WM_CLOSE:
             kernel_service_->stop();
             tray_manager_->cleanup();
             DestroyWindow(hWnd);
             break;
-
         case WM_DESTROY:
             PostQuitMessage(0);
             break;
-
         default:
             return DefWindowProcW(hWnd, message, wParam, lParam);
     }
@@ -191,7 +173,6 @@ LRESULT Service::handle_message(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
 }
 
 void Service::handle_menu_command(const int menuId) const {
-    // 处理订阅切换
     try {
         if(menuId >= IDM_PROFILE_BASE && menuId < IDM_PROFILE_MAX)
             on_switch_profile(menuId - IDM_PROFILE_BASE);
