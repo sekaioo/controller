@@ -49,7 +49,7 @@ public:
 private:
     bool initialize();
     void handle_menu_command(int menuId) const;
-    void on_switch_profile(int profile_index) const;
+    void on_switch_profile(size_t profile_index) const;
     void on_update_profiles() const;
     void on_start_service() const;
     void on_stop_service() const;
@@ -175,7 +175,7 @@ LRESULT Service::handle_message(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
 void Service::handle_menu_command(const int menuId) const {
     try {
         if(menuId >= IDM_PROFILE_BASE && menuId < IDM_PROFILE_MAX)
-            on_switch_profile(menuId - IDM_PROFILE_BASE);
+            on_switch_profile(static_cast<size_t>(menuId - IDM_PROFILE_BASE));
         else {
             switch(menuId) {
                 case IDM_UPDATE_PROFILE:
@@ -201,10 +201,7 @@ void Service::handle_menu_command(const int menuId) const {
     }
 }
 
-void Service::on_switch_profile(const int profile_index) const {
-    if(profile_index < 0 || static_cast<size_t>(profile_index) >= profiles_manager_.count())
-        return;
-
+void Service::on_switch_profile(const size_t profile_index) const {
     const bool is_running = kernel_service_->is_running();
     if(is_running) on_stop_service();
     try {

@@ -42,11 +42,10 @@ public:
         update_state_(make_shared<UpdateState>()) {}
 
     [[nodiscard]] const vector<string>& names() const { return names_; }
-    [[nodiscard]] size_t count() const { return names_.size(); }
     [[nodiscard]] int current_index() const { return current_index_; }
     [[nodiscard]] bool is_updating() const { return update_state_->updating.load(); }
     [[nodiscard]] string take_errors() const;
-    void switch_profile(int index);
+    void switch_profile(size_t index);
     void update_profile(string_view name, function<void(UpdateResult)> on_result) const;
     void update_all_profile(function<void(UpdateResult)> on_result) const;
 private:
@@ -99,7 +98,10 @@ bool ProfileManager::download_one(const Config::Profile& profile, string_view ua
     return download_profile(profile.url, ua, dst_path);
 }
 
-void ProfileManager::switch_profile(const int index) {
+void ProfileManager::switch_profile(const size_t index) {
+    if(index >= names_.size())
+        throw runtime_error(tr("dialog.profile_path_not_in_list"));
+
     const auto it = profiles_.find(names_[index]);
     if(it == profiles_.end() || it->second.path.empty())
         throw runtime_error(tr("dialog.profile_path_not_in_list"));
@@ -112,7 +114,7 @@ void ProfileManager::switch_profile(const int index) {
         const fs::path errorPath = absolute(e.path1());
         throw runtime_error(format("{}\n{}", errorPath.string(), tr("dialog.check_profile_list")));
     }
-    current_index_ = index;
+    current_index_ = static_cast<int>(index);
 }
 
 void ProfileManager::update_profile(string_view name, function<void(UpdateResult)> on_result) const {
