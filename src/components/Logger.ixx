@@ -24,7 +24,6 @@ public:
         ERROR = 3,
         FATAL = 4
     };
-
     static void initialize(bool disabled, string_view level, string_view output, bool timestamp) noexcept;
     static void log(string_view message, Level level) noexcept;
 private:

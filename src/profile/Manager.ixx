@@ -28,8 +28,11 @@ namespace fs = std::filesystem;
 // @formatter:off
 export class ProfileManager {
 public:
-    enum class UpdateResult { Busy, Success, Failed };
-
+    enum class UpdateResult {
+        Busy,
+        Success,
+        Failed
+    };
     explicit ProfileManager(const Config& config) :
         profiles_(config.profiles),
         ua_(config.ua),
@@ -42,21 +45,19 @@ public:
     [[nodiscard]] size_t count() const { return names_.size(); }
     [[nodiscard]] int current_index() const { return current_index_; }
     [[nodiscard]] bool is_updating() const { return update_state_->updating.load(); }
+    [[nodiscard]] string take_errors() const;
     void switch_profile(int index);
     void update_profile(string_view name, function<void(UpdateResult)> on_result) const;
     void update_all_profile(function<void(UpdateResult)> on_result) const;
-    [[nodiscard]] string take_errors() const;
 private:
     struct UpdateState {
         mutex mutex;
         queue<string> errors;
         atomic<bool> updating = false;
     };
-
     [[nodiscard]] int detect_current() const;
     static vector<string> build_names(const map<string, Config::Profile>& profiles);
     static bool download_one(const Config::Profile& profile, string_view ua);
-    // 在后台线程逐个更新 tasks, 通过 on_result 回调结果; 已在更新则回调 Busy
     void run_updates(vector<pair<string, Config::Profile>> tasks, function<void(UpdateResult)> on_result) const;
 
     map<string, Config::Profile> profiles_;
@@ -114,7 +115,6 @@ void ProfileManager::switch_profile(const int index) {
     current_index_ = index;
 }
 
-// 更新单个订阅: 找不到时也交给 run_updates, 由 download_one 抛出并归为 Failed
 void ProfileManager::update_profile(string_view name, function<void(UpdateResult)> on_result) const {
     const auto it = profiles_.find(string(name));
     Config::Profile profile = it != profiles_.end() ? it->second : Config::Profile{};
