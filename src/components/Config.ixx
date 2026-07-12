@@ -67,7 +67,7 @@ void Config::populate(const json::Document& doc) {
 
     // log
     auto log_object = doc["log"].GetObject();
-    log.disabled = log_object["disabled"].GetString();
+    log.disabled = log_object["disabled"].GetBool();
     log.level = log_object["level"].GetString();
     log.output = log_object["output"].GetString();
     log.timestamp = log_object["timestamp"].GetBool();
